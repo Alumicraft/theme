@@ -1,8 +1,10 @@
 // Monocore Theme - Sidebar Icon Customization
 // Uses Phosphor Icons to replace default ERPNext sidebar icons
+// Icon map is loaded from Monocore Theme Settings
 
 (function() {
-    const iconMap = {
+    // Fallback defaults used until settings are fetched
+    var iconMap = {
         "Home": "ph-house",
         "Projects": "ph-folder-simple",
         "Sales": "ph-arrow-up-right",
@@ -14,6 +16,25 @@
         "Users": "ph-user-plus",
         "Terminal": "ph-terminal-window",
     };
+
+    var settingsLoaded = false;
+
+    function loadIconMap() {
+        if (settingsLoaded) return;
+        settingsLoaded = true;
+
+        frappe.xcall("monocore_theme.api.get_workspace_icons")
+            .then(function(map) {
+                if (map && Object.keys(map).length) {
+                    iconMap = map;
+                }
+                swapIcons();
+            })
+            .catch(function() {
+                // Settings not available yet — use defaults
+                swapIcons();
+            });
+    }
 
     function swapIcons() {
         document.querySelectorAll(".sidebar-item-container.is-draggable").forEach(function(item) {
@@ -34,8 +55,8 @@
         });
     }
 
-    // Run on initial load with retries
-    setTimeout(swapIcons, 500);
+    // Load settings then swap on initial load
+    setTimeout(loadIconMap, 500);
     setTimeout(swapIcons, 1500);
     setTimeout(swapIcons, 3000);
 

@@ -18,3 +18,8 @@ app_include_js = [
     "/assets/monocore_theme/js/shortcut_group_renderer.js",
     "/assets/monocore_theme/js/shortcut_group_block.js",
 ]
+
+# Install
+# -------
+
+after_install = "monocore_theme.install.after_install"

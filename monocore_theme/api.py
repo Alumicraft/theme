@@ -74,3 +74,15 @@ def delete_shortcut_group(name):
     frappe.delete_doc("Shortcut Group", name)
     frappe.db.commit()
     return "ok"
+
+
+@frappe.whitelist(allow_guest=False)
+def get_workspace_icons():
+    """Return the workspace → icon class map from Monocore Theme Settings."""
+    icons = frappe.get_all(
+        "Workspace Icon",
+        filters={"parent": "Monocore Theme Settings"},
+        fields=["workspace", "icon_class"],
+        order_by="idx asc",
+    )
+    return {row["workspace"]: row["icon_class"] for row in icons}
