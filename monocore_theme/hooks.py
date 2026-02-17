@@ -11,7 +11,10 @@ app_license = "MIT"
 app_include_css = [
     "https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css",
     "/assets/monocore_theme/css/theme.css",
+    "/assets/monocore_theme/css/shortcut_group.css",
 ]
 app_include_js = [
     "/assets/monocore_theme/js/sidebar_icons.js",
+    "/assets/monocore_theme/js/shortcut_group_renderer.js",
+    "/assets/monocore_theme/js/shortcut_group_block.js",
 ]

@@ -1,0 +1,81 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-02-17 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "label",
+  "link_to",
+  "column_break_opts",
+  "doctype_view",
+  "color",
+  "section_break_filters",
+  "filters_json",
+  "format"
+ ],
+ "fields": [
+  {
+   "fieldname": "label",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Label",
+   "reqd": 1
+  },
+  {
+   "fieldname": "link_to",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Link To",
+   "options": "DocType",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_opts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "List",
+   "fieldname": "doctype_view",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "View",
+   "options": "List\nReport Builder\nDashboard\nNew"
+  },
+  {
+   "default": "Grey",
+   "fieldname": "color",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Color",
+   "options": "Grey\nGreen\nRed\nOrange\nPink\nYellow\nBlue\nCyan"
+  },
+  {
+   "fieldname": "section_break_filters",
+   "fieldtype": "Section Break"
+  },
+  {
+   "description": "JSON object of filters, e.g. {\"status\": \"Open\"}",
+   "fieldname": "filters_json",
+   "fieldtype": "Small Text",
+   "label": "Filters JSON"
+  },
+  {
+   "description": "Optional format string, e.g. '{} Open'",
+   "fieldname": "format",
+   "fieldtype": "Data",
+   "label": "Format"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-17 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Monocore Theme",
+ "name": "Shortcut Group Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC"
+}
