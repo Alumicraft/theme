@@ -10,3 +10,6 @@ build-backend = "flit_core:buildapi"
 
 [tool.bench]
 app-name = "monocore_theme"
+
+[tool.bench.frappe-dependencies]
+frappe = ">=15.0.0"
