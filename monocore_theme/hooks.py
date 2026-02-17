@@ -23,3 +23,4 @@ app_include_js = [
 # -------
 
 after_install = "monocore_theme.install.after_install"
+after_migrate = "monocore_theme.install.after_install"

@@ -27,7 +27,11 @@ KNOWN_ICONS = {
 
 def after_install():
     """Seed Monocore Theme Settings with all site workspaces."""
-    settings = frappe.get_single("Monocore Theme Settings")
+    try:
+        settings = frappe.get_single("Monocore Theme Settings")
+    except Exception:
+        # DocType may not have synced yet during migration
+        return
 
     if not settings.workspace_icons:
         workspaces = frappe.get_all("Workspace", filters={"public": 1}, pluck="name")
@@ -36,5 +40,6 @@ def after_install():
                 "workspace": ws,
                 "icon_class": KNOWN_ICONS.get(ws, ""),
             })
+        settings.flags.ignore_validate = True
         settings.save()
         frappe.db.commit()
