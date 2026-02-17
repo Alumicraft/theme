@@ -1,16 +1,147 @@
 // Monocore Theme - Shortcut Group Block
-// Workspace integration, add/edit dialog, and persistence
+// EditorJS tool + workspace integration + dialog
 
 frappe.provide("monocore_theme");
 
-// ─── Workspace Integration ──────────────────────────────────────────────────
+// ─── EditorJS Tool Class ────────────────────────────────────────────────────
+
+monocore_theme.ShortcutGroupTool = class {
+    static get toolbox() {
+        return {
+            title: "Shortcut Group",
+            icon: '<svg width="17" height="15" viewBox="0 0 17 15" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="0.5" y="0.5" width="16" height="3.5" rx="1"/><rect x="0.5" y="5.75" width="16" height="3.5" rx="1"/><rect x="0.5" y="11" width="16" height="3.5" rx="1"/></svg>',
+        };
+    }
+
+    static get isReadOnlySupported() {
+        return true;
+    }
+
+    constructor({ data, api, readOnly }) {
+        this.data = data || {};
+        this.api = api;
+        this.readOnly = readOnly;
+        this.wrapper = null;
+    }
+
+    render() {
+        this.wrapper = document.createElement("div");
+        this.wrapper.classList.add("shortcut-group-editor-block");
+
+        if (this.data.shortcut_group_name) {
+            this._loadAndRender();
+        } else if (!this.readOnly) {
+            this._promptCreate();
+        }
+
+        return this.wrapper;
+    }
+
+    save() {
+        return {
+            shortcut_group_name: this.data.shortcut_group_name || "",
+        };
+    }
+
+    _loadAndRender() {
+        var self = this;
+        frappe
+            .xcall("frappe.client.get", {
+                doctype: "Shortcut Group",
+                name: this.data.shortcut_group_name,
+            })
+            .then(function (doc) {
+                self.wrapper.innerHTML = "";
+                new monocore_theme.ShortcutGroupRenderer(
+                    {
+                        name: doc.name,
+                        label: doc.label,
+                        links: (doc.links || []).map(function (l) {
+                            return {
+                                label: l.label,
+                                link_to: l.link_to,
+                                doctype_view: l.doctype_view || "List",
+                                color: l.color || "Grey",
+                                format: l.format || "",
+                                filters_json: l.filters_json || "{}",
+                            };
+                        }),
+                    },
+                    self.wrapper
+                );
+            })
+            .catch(function () {
+                self.wrapper.innerHTML =
+                    '<div style="padding:1rem;color:var(--text-muted);">Shortcut Group not found</div>';
+            });
+    }
+
+    _promptCreate() {
+        var self = this;
+        var route = frappe.get_route();
+        var workspace = route && route.length > 1 ? route.slice(1).join("/") : "";
+
+        monocore_theme.showShortcutGroupDialog(workspace, null, function (name) {
+            self.data.shortcut_group_name = name;
+            self._loadAndRender();
+        });
+    }
+};
+
+// ─── Patch EditorJS to register our tool ────────────────────────────────────
+
+(function () {
+    function patchEditorJS() {
+        if (!window.EditorJS || window.EditorJS._sgPatched) return false;
+
+        var OrigEditorJS = window.EditorJS;
+
+        var PatchedEditorJS = function (config) {
+            if (config && config.tools && !config.tools.shortcut_group) {
+                config.tools.shortcut_group = {
+                    class: monocore_theme.ShortcutGroupTool,
+                };
+            }
+            return new OrigEditorJS(config);
+        };
+
+        PatchedEditorJS.prototype = OrigEditorJS.prototype;
+        PatchedEditorJS._sgPatched = true;
+
+        // Copy static properties
+        Object.getOwnPropertyNames(OrigEditorJS).forEach(function (key) {
+            if (key !== "prototype" && key !== "length" && key !== "name") {
+                try {
+                    Object.defineProperty(
+                        PatchedEditorJS,
+                        key,
+                        Object.getOwnPropertyDescriptor(OrigEditorJS, key)
+                    );
+                } catch (e) {
+                    /* skip non-configurable */
+                }
+            }
+        });
+
+        window.EditorJS = PatchedEditorJS;
+        return true;
+    }
+
+    // Try immediately, then poll until available
+    if (!patchEditorJS()) {
+        var iv = setInterval(function () {
+            if (patchEditorJS()) clearInterval(iv);
+        }, 200);
+        setTimeout(function () {
+            clearInterval(iv);
+        }, 30000);
+    }
+})();
+
+// ─── Also render saved groups on workspace view (non-edit) ──────────────────
 
 $(document).on("page-change", function () {
-    monocore_theme._buttonAdded = null;
-    setTimeout(function () {
-        monocore_theme.loadShortcutGroups();
-        monocore_theme.setupWorkspaceIntegration();
-    }, 800);
+    setTimeout(monocore_theme.loadShortcutGroups, 800);
     setTimeout(monocore_theme.loadShortcutGroups, 2000);
 });
 
@@ -24,10 +155,9 @@ monocore_theme.loadShortcutGroups = function () {
     }
     if (!workspaceName) return;
 
-    // Already rendered for this workspace
-    if ($('.shortcut-groups-container[data-workspace="' + workspaceName + '"]').length) {
-        return;
-    }
+    // Skip if already rendered or if editor blocks handle it
+    if ($('.shortcut-groups-container[data-workspace="' + workspaceName + '"]').length) return;
+    if ($(".shortcut-group-editor-block").length) return;
 
     frappe
         .xcall("monocore_theme.api.get_shortcut_groups", {
@@ -35,11 +165,8 @@ monocore_theme.loadShortcutGroups = function () {
         })
         .then(function (groups) {
             if (!groups || !groups.length) return;
-
-            // Race condition guard
-            if ($('.shortcut-groups-container[data-workspace="' + workspaceName + '"]').length) {
-                return;
-            }
+            if ($('.shortcut-groups-container[data-workspace="' + workspaceName + '"]').length) return;
+            if ($(".shortcut-group-editor-block").length) return;
 
             var $target = $(".workspace-main-section .widget-group").first();
             var $container = $(
@@ -56,137 +183,7 @@ monocore_theme.loadShortcutGroups = function () {
                 new monocore_theme.ShortcutGroupRenderer(groups[i], $container);
             }
         })
-        .catch(function () {
-            // DocType may not exist yet after fresh install
-        });
-};
-
-// ─── Inject into workspace editor ───────────────────────────────────────────
-
-monocore_theme.setupWorkspaceIntegration = function () {
-    var route = frappe.get_route();
-    if (!route || route[0] !== "Workspaces" || route.length < 2) return;
-
-    var workspaceName = route.slice(1).join("/");
-
-    // Add "Shortcut Group" as a page action button
-    monocore_theme._addPageButton(workspaceName);
-
-    // Inject into native "new block" dialog when it appears
-    monocore_theme._watchForBlockDialog(workspaceName);
-};
-
-monocore_theme._addPageButton = function (workspaceName) {
-    if (monocore_theme._buttonAdded === workspaceName) return;
-    monocore_theme._buttonAdded = workspaceName;
-
-    try {
-        var page = cur_page && cur_page.page;
-        if (page && page.add_inner_button) {
-            page.add_inner_button(
-                __("Shortcut Group"),
-                function () {
-                    monocore_theme.addShortcutGroup(workspaceName);
-                },
-                __("Add Block")
-            );
-        }
-    } catch (e) {
-        // Page actions not available — no-op
-    }
-};
-
-monocore_theme._watchForBlockDialog = function (workspaceName) {
-    // Disconnect any previous observer
-    if (monocore_theme._dialogObserver) {
-        monocore_theme._dialogObserver.disconnect();
-    }
-
-    monocore_theme._currentWorkspace = workspaceName;
-
-    monocore_theme._dialogObserver = new MutationObserver(function (mutations) {
-        for (var i = 0; i < mutations.length; i++) {
-            var added = mutations[i].addedNodes;
-            for (var j = 0; j < added.length; j++) {
-                var node = added[j];
-                if (!node || node.nodeType !== 1) continue;
-                var $node = $(node);
-                if ($node.hasClass("modal") || $node.find(".modal-dialog").length) {
-                    setTimeout(function () {
-                        monocore_theme._tryInjectBlockOption($node);
-                    }, 150);
-                }
-            }
-        }
-    });
-
-    monocore_theme._dialogObserver.observe(document.body, { childList: true });
-};
-
-monocore_theme._tryInjectBlockOption = function ($modal) {
-    // Look for widget/block type items inside the dialog
-    var selectors = [
-        ".widget-type",
-        ".block-list-item",
-        ".new-block-item",
-        "[data-block-type]",
-        "[data-widget-type]",
-    ];
-
-    var $items = $();
-    for (var i = 0; i < selectors.length; i++) {
-        $items = $modal.find(selectors[i]);
-        if ($items.length) break;
-    }
-    if (!$items.length) return;
-
-    // Already injected
-    if ($modal.find(".sg-injected-block-option").length) return;
-
-    // Find the "Shortcut" item to insert directly after it
-    var $shortcutItem = null;
-    $items.each(function () {
-        var text = $(this).text().trim().toLowerCase();
-        if (text === "shortcut") {
-            $shortcutItem = $(this);
-            return false;
-        }
-    });
-
-    // Clone an existing item and restyle as ours
-    var $template = $shortcutItem || $items.first();
-    var $option = $template.clone(false);
-    $option.addClass("sg-injected-block-option");
-    $option.off();
-
-    // Update label text (try common inner selectors, then fall back to root text)
-    var $label = $option.find("span, .block-title, .widget-title, p").first();
-    if ($label.length) {
-        $label.text(__("Shortcut Group"));
-    } else {
-        $option.text(__("Shortcut Group"));
-    }
-
-    $option.on("click", function () {
-        // Close the dialog
-        var $close = $modal.find(".btn-close, [data-dismiss='modal'], .close").first();
-        if ($close.length) {
-            $close.trigger("click");
-        } else {
-            $modal.modal && $modal.modal("hide");
-        }
-
-        setTimeout(function () {
-            monocore_theme.addShortcutGroup(monocore_theme._currentWorkspace);
-        }, 250);
-    });
-
-    // Insert right after "Shortcut" if found, otherwise at the end
-    if ($shortcutItem) {
-        $shortcutItem.after($option);
-    } else {
-        $items.last().after($option);
-    }
+        .catch(function () {});
 };
 
 // ─── Refresh helper ─────────────────────────────────────────────────────────
@@ -215,7 +212,7 @@ monocore_theme.addShortcutGroup = function (workspace) {
 
 // ─── Dialog ─────────────────────────────────────────────────────────────────
 
-monocore_theme.showShortcutGroupDialog = function (workspace, existingDoc) {
+monocore_theme.showShortcutGroupDialog = function (workspace, existingDoc, callback) {
     var isEdit = !!existingDoc;
     var links = [];
 
@@ -284,13 +281,16 @@ monocore_theme.showShortcutGroupDialog = function (workspace, existingDoc) {
                 .xcall("monocore_theme.api.save_shortcut_group", {
                     data: payload,
                 })
-                .then(function () {
+                .then(function (name) {
                     d.hide();
                     frappe.show_alert({
                         message: isEdit ? __("Updated") : __("Added"),
                         indicator: "green",
                     });
                     monocore_theme._refreshShortcutGroups();
+
+                    // Notify EditorJS block if created via the block tool
+                    if (callback) callback(name);
                 })
                 .catch(function (err) {
                     frappe.msgprint(__("Error: {0}", [err.message || err]));
@@ -300,7 +300,6 @@ monocore_theme.showShortcutGroupDialog = function (workspace, existingDoc) {
 
     d.show();
 
-    // Render shortcut rows inside the dialog
     var $wrapper = d.fields_dict.links_html.$wrapper;
     $wrapper.empty();
     monocore_theme._renderDialogRows($wrapper, links);
