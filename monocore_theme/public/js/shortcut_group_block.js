@@ -143,8 +143,19 @@ monocore_theme._tryInjectBlockOption = function ($modal) {
     // Already injected
     if ($modal.find(".sg-injected-block-option").length) return;
 
+    // Find the "Shortcut" item to insert directly after it
+    var $shortcutItem = null;
+    $items.each(function () {
+        var text = $(this).text().trim().toLowerCase();
+        if (text === "shortcut") {
+            $shortcutItem = $(this);
+            return false;
+        }
+    });
+
     // Clone an existing item and restyle as ours
-    var $option = $items.first().clone(false);
+    var $template = $shortcutItem || $items.first();
+    var $option = $template.clone(false);
     $option.addClass("sg-injected-block-option");
     $option.off();
 
@@ -170,7 +181,12 @@ monocore_theme._tryInjectBlockOption = function ($modal) {
         }, 250);
     });
 
-    $items.last().after($option);
+    // Insert right after "Shortcut" if found, otherwise at the end
+    if ($shortcutItem) {
+        $shortcutItem.after($option);
+    } else {
+        $items.last().after($option);
+    }
 };
 
 // ─── Refresh helper ─────────────────────────────────────────────────────────
