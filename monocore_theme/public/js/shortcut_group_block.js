@@ -6,7 +6,11 @@ frappe.provide("monocore_theme");
 // ─── Workspace Integration ──────────────────────────────────────────────────
 
 $(document).on("page-change", function () {
-    setTimeout(monocore_theme.loadShortcutGroups, 800);
+    monocore_theme._buttonAdded = null;
+    setTimeout(function () {
+        monocore_theme.loadShortcutGroups();
+        monocore_theme.setupWorkspaceIntegration();
+    }, 800);
     setTimeout(monocore_theme.loadShortcutGroups, 2000);
 });
 
@@ -32,12 +36,11 @@ monocore_theme.loadShortcutGroups = function () {
         .then(function (groups) {
             if (!groups || !groups.length) return;
 
-            // Already rendered (race condition guard)
+            // Race condition guard
             if ($('.shortcut-groups-container[data-workspace="' + workspaceName + '"]').length) {
                 return;
             }
 
-            // Find insertion point in workspace
             var $target = $(".workspace-main-section .widget-group").first();
             var $container = $(
                 '<div class="shortcut-groups-container" data-workspace="' + workspaceName + '">'
@@ -54,8 +57,120 @@ monocore_theme.loadShortcutGroups = function () {
             }
         })
         .catch(function () {
-            // Silently fail — DocType may not exist yet after fresh install
+            // DocType may not exist yet after fresh install
         });
+};
+
+// ─── Inject into workspace editor ───────────────────────────────────────────
+
+monocore_theme.setupWorkspaceIntegration = function () {
+    var route = frappe.get_route();
+    if (!route || route[0] !== "Workspaces" || route.length < 2) return;
+
+    var workspaceName = route.slice(1).join("/");
+
+    // Add "Shortcut Group" as a page action button
+    monocore_theme._addPageButton(workspaceName);
+
+    // Inject into native "new block" dialog when it appears
+    monocore_theme._watchForBlockDialog(workspaceName);
+};
+
+monocore_theme._addPageButton = function (workspaceName) {
+    if (monocore_theme._buttonAdded === workspaceName) return;
+    monocore_theme._buttonAdded = workspaceName;
+
+    try {
+        var page = cur_page && cur_page.page;
+        if (page && page.add_inner_button) {
+            page.add_inner_button(
+                __("Shortcut Group"),
+                function () {
+                    monocore_theme.addShortcutGroup(workspaceName);
+                },
+                __("Add Block")
+            );
+        }
+    } catch (e) {
+        // Page actions not available — no-op
+    }
+};
+
+monocore_theme._watchForBlockDialog = function (workspaceName) {
+    // Disconnect any previous observer
+    if (monocore_theme._dialogObserver) {
+        monocore_theme._dialogObserver.disconnect();
+    }
+
+    monocore_theme._currentWorkspace = workspaceName;
+
+    monocore_theme._dialogObserver = new MutationObserver(function (mutations) {
+        for (var i = 0; i < mutations.length; i++) {
+            var added = mutations[i].addedNodes;
+            for (var j = 0; j < added.length; j++) {
+                var node = added[j];
+                if (!node || node.nodeType !== 1) continue;
+                var $node = $(node);
+                if ($node.hasClass("modal") || $node.find(".modal-dialog").length) {
+                    setTimeout(function () {
+                        monocore_theme._tryInjectBlockOption($node);
+                    }, 150);
+                }
+            }
+        }
+    });
+
+    monocore_theme._dialogObserver.observe(document.body, { childList: true });
+};
+
+monocore_theme._tryInjectBlockOption = function ($modal) {
+    // Look for widget/block type items inside the dialog
+    var selectors = [
+        ".widget-type",
+        ".block-list-item",
+        ".new-block-item",
+        "[data-block-type]",
+        "[data-widget-type]",
+    ];
+
+    var $items = $();
+    for (var i = 0; i < selectors.length; i++) {
+        $items = $modal.find(selectors[i]);
+        if ($items.length) break;
+    }
+    if (!$items.length) return;
+
+    // Already injected
+    if ($modal.find(".sg-injected-block-option").length) return;
+
+    // Clone an existing item and restyle as ours
+    var $option = $items.first().clone(false);
+    $option.addClass("sg-injected-block-option");
+    $option.off();
+
+    // Update label text (try common inner selectors, then fall back to root text)
+    var $label = $option.find("span, .block-title, .widget-title, p").first();
+    if ($label.length) {
+        $label.text(__("Shortcut Group"));
+    } else {
+        $option.text(__("Shortcut Group"));
+    }
+
+    $option.on("click", function () {
+        // Close the dialog
+        var $close = $modal.find(".btn-close, [data-dismiss='modal'], .close").first();
+        if ($close.length) {
+            $close.trigger("click");
+        } else {
+            $modal.modal && $modal.modal("hide");
+        }
+
+        setTimeout(function () {
+            monocore_theme.addShortcutGroup(monocore_theme._currentWorkspace);
+        }, 250);
+    });
+
+    $items.last().after($option);
 };
 
 // ─── Refresh helper ─────────────────────────────────────────────────────────
