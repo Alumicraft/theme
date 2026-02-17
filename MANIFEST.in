@@ -1,0 +1,16 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include monocore_theme *.css
+recursive-include monocore_theme *.html
+recursive-include monocore_theme *.ico
+recursive-include monocore_theme *.js
+recursive-include monocore_theme *.json
+recursive-include monocore_theme *.md
+recursive-include monocore_theme *.png
+recursive-include monocore_theme *.py
+recursive-include monocore_theme *.svg
+recursive-include monocore_theme *.txt
