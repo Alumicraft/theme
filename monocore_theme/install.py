@@ -1,26 +1,40 @@
 import frappe
 
 
-DEFAULT_ICONS = [
-    {"workspace": "Home", "icon_class": "ph-house"},
-    {"workspace": "Projects", "icon_class": "ph-folder-simple"},
-    {"workspace": "Sales", "icon_class": "ph-arrow-up-right"},
-    {"workspace": "Purchases", "icon_class": "ph-shopping-cart"},
-    {"workspace": "Items", "icon_class": "ph-package"},
-    {"workspace": "Manufacturing", "icon_class": "ph-factory"},
-    {"workspace": "Customers", "icon_class": "ph-users"},
-    {"workspace": "Accounting", "icon_class": "ph-coins"},
-    {"workspace": "Users", "icon_class": "ph-user-plus"},
-    {"workspace": "Terminal", "icon_class": "ph-terminal-window"},
-]
+# Known icons for common ERPNext workspaces
+KNOWN_ICONS = {
+    "Home": "ph-house",
+    "Projects": "ph-folder-simple",
+    "Sales": "ph-arrow-up-right",
+    "Purchases": "ph-shopping-cart",
+    "Items": "ph-package",
+    "Manufacturing": "ph-factory",
+    "Customers": "ph-users",
+    "Accounting": "ph-coins",
+    "Users": "ph-user-plus",
+    "Terminal": "ph-terminal-window",
+    "Stock": "ph-warehouse",
+    "Assets": "ph-buildings",
+    "HR": "ph-identification-badge",
+    "Payroll": "ph-money",
+    "CRM": "ph-handshake",
+    "Support": "ph-headset",
+    "Quality": "ph-seal-check",
+    "Website": "ph-globe",
+    "Settings": "ph-gear",
+}
 
 
 def after_install():
-    """Seed Monocore Theme Settings with default workspace icons."""
+    """Seed Monocore Theme Settings with all site workspaces."""
     settings = frappe.get_single("Monocore Theme Settings")
 
     if not settings.workspace_icons:
-        for icon in DEFAULT_ICONS:
-            settings.append("workspace_icons", icon)
+        workspaces = frappe.get_all("Workspace", filters={"public": 1}, pluck="name")
+        for ws in sorted(workspaces):
+            settings.append("workspace_icons", {
+                "workspace": ws,
+                "icon_class": KNOWN_ICONS.get(ws, ""),
+            })
         settings.save()
         frappe.db.commit()
