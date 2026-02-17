@@ -3,8 +3,8 @@ from frappe.model.document import Document
 
 
 class MonocoreThemeSettings(Document):
-    def onload(self):
-        """Sync table with actual workspaces every time settings are opened."""
+    def validate(self):
+        """Sync table with actual workspaces when the doc is saved."""
         self.sync_workspace_icons()
 
     def sync_workspace_icons(self):
@@ -25,5 +25,3 @@ class MonocoreThemeSettings(Document):
                 "workspace": ws,
                 "icon_class": existing.get(ws, ""),
             })
-
-        self.save()
