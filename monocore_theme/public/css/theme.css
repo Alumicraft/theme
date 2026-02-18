@@ -3,10 +3,12 @@
 /* Monocore Theme - Sidebar Styling */
 
 /* Swap icon color on active/hover */
+.desk-sidebar .standard-sidebar-item.selected .sidebar-item-icon .ph,
 .desk-sidebar .standard-sidebar-item.selected .sidebar-item-icon .ph-fill {
     color: var(--text-color) !important;
 }
 
+.desk-sidebar .standard-sidebar-item:hover .sidebar-item-icon .ph,
 .desk-sidebar .standard-sidebar-item:hover .sidebar-item-icon .ph-fill {
     color: var(--text-color) !important;
 }
