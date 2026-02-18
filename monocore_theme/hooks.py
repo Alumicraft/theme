@@ -14,7 +14,6 @@ app_include_css = [
     "/assets/monocore_theme/css/shortcut_group.css",
 ]
 app_include_js = [
-    "/assets/monocore_theme/js/sidebar_icons.js",
     "/assets/monocore_theme/js/shortcut_group_renderer.js",
     "/assets/monocore_theme/js/shortcut_group_block.js",
 ]
