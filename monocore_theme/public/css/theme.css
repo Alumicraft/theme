@@ -50,13 +50,14 @@
     font-family: "Phosphor-Fill" !important;
     font-style: normal;
     font-weight: normal;
-    font-size: 16px;
+    font-size: 14px;
     line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
     color: var(--text-muted);
 }
 
