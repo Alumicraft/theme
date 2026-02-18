@@ -13,7 +13,15 @@
     color: var(--text-color) !important;
 }
 
-/* Add spacing between sidebar icon and label */
+/* Sidebar icon size and spacing */
+.desk-sidebar .sidebar-item-icon .ph,
+.desk-sidebar .sidebar-item-icon .ph-fill {
+    font-size: 16px !important;
+    line-height: 1 !important;
+    width: 16px !important;
+    height: 16px !important;
+}
+
 .desk-sidebar .sidebar-item-icon {
     margin-right: var(--margin-sm);
 }
