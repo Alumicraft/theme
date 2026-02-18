@@ -88,49 +88,48 @@ monocore_theme.ShortcutGroupTool = class {
     }
 };
 
-// ─── Patch EditorJS to register our tool ────────────────────────────────────
+// ─── Patch Workspace editor to register our tool ────────────────────────────
+// Frappe v15 hardcodes the EditorJS tools list in initialize_editorjs().
+// EditorJS is imported as a module so window.EditorJS patching doesn't work.
+// Instead, we override initialize_editorjs to inject our tool before the
+// EditorJS instance is created.
 
 (function () {
-    function patchEditorJS() {
-        if (!window.EditorJS || window.EditorJS._sgPatched) return false;
+    function patchWorkspace() {
+        if (!frappe.views || !frappe.views.Workspace) return false;
+        var proto = frappe.views.Workspace.prototype;
+        if (!proto.initialize_editorjs || proto._sgPatched) return !!proto._sgPatched;
 
-        var OrigEditorJS = window.EditorJS;
+        var orig = proto.initialize_editorjs;
+        proto.initialize_editorjs = function (blocks) {
+            // Call original to build this.tools and create editor
+            orig.call(this, blocks);
 
-        var PatchedEditorJS = function (config) {
-            if (config && config.tools && !config.tools.shortcut_group) {
-                config.tools.shortcut_group = {
-                    class: monocore_theme.ShortcutGroupTool,
-                };
-            }
-            return new OrigEditorJS(config);
+            // Add our tool to the tools config
+            this.tools.shortcut_group = {
+                class: monocore_theme.ShortcutGroupTool,
+                config: { page_data: this.page_data || [] },
+            };
+
+            // Recreate editor with our tool included using the same constructor
+            var EditorJSClass = this.editor.constructor;
+            this.editor.destroy();
+            this.editor = new EditorJSClass({
+                data: { blocks: blocks || [] },
+                tools: this.tools,
+                autofocus: false,
+                readOnly: true,
+                logLevel: "ERROR",
+            });
         };
-
-        PatchedEditorJS.prototype = OrigEditorJS.prototype;
-        PatchedEditorJS._sgPatched = true;
-
-        // Copy static properties
-        Object.getOwnPropertyNames(OrigEditorJS).forEach(function (key) {
-            if (key !== "prototype" && key !== "length" && key !== "name") {
-                try {
-                    Object.defineProperty(
-                        PatchedEditorJS,
-                        key,
-                        Object.getOwnPropertyDescriptor(OrigEditorJS, key)
-                    );
-                } catch (e) {
-                    /* skip non-configurable */
-                }
-            }
-        });
-
-        window.EditorJS = PatchedEditorJS;
+        proto._sgPatched = true;
         return true;
     }
 
-    // Try immediately, then poll until available
-    if (!patchEditorJS()) {
+    // Poll until Workspace class is available
+    if (!patchWorkspace()) {
         var iv = setInterval(function () {
-            if (patchEditorJS()) clearInterval(iv);
+            if (patchWorkspace()) clearInterval(iv);
         }, 200);
         setTimeout(function () {
             clearInterval(iv);

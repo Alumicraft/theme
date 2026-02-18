@@ -8,3 +8,8 @@
 .desk-sidebar .standard-sidebar-item:hover .sidebar-item-icon .ph {
     color: var(--text-color) !important;
 }
+
+/* Add spacing between sidebar icon and label */
+.desk-sidebar .sidebar-item-icon {
+    margin-right: var(--margin-sm);
+}
