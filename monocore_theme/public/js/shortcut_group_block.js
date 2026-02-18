@@ -98,35 +98,63 @@ monocore_theme.ShortcutGroupTool = class {
     function patchWorkspace() {
         if (!frappe.views || !frappe.views.Workspace) return false;
         var proto = frappe.views.Workspace.prototype;
-        if (!proto.initialize_editorjs || proto._sgPatched) return !!proto._sgPatched;
+        if (proto._sgPatched) return true;
 
-        var orig = proto.initialize_editorjs;
+        var origInit = proto.initialize_editorjs;
         proto.initialize_editorjs = function (blocks) {
-            // Call original to build this.tools and create editor
-            orig.call(this, blocks);
+            var self = this;
 
-            // Add our tool to the tools config
-            this.tools.shortcut_group = {
-                class: monocore_theme.ShortcutGroupTool,
-                config: { page_data: this.page_data || [] },
-            };
-
-            // Recreate editor with our tool included using the same constructor
-            var EditorJSClass = this.editor.constructor;
-            this.editor.destroy();
-            this.editor = new EditorJSClass({
-                data: { blocks: blocks || [] },
-                tools: this.tools,
-                autofocus: false,
-                readOnly: true,
-                logLevel: "ERROR",
+            // Intercept the this.tools assignment via a property setter.
+            // When the original code does `this.tools = { ... }`, our setter
+            // injects shortcut_group before EditorJS reads the object.
+            Object.defineProperty(this, "tools", {
+                set: function (val) {
+                    val.shortcut_group = {
+                        class: monocore_theme.ShortcutGroupTool,
+                        config: { page_data: self.page_data || [] },
+                    };
+                    // Store on a backing field
+                    Object.defineProperty(self, "tools", {
+                        value: val,
+                        writable: true,
+                        configurable: true,
+                    });
+                },
+                get: function () {
+                    return undefined;
+                },
+                configurable: true,
             });
+
+            // Call original — it sets this.tools (triggering our setter)
+            // then creates the EditorJS instance with the augmented tools
+            origInit.call(this, blocks);
         };
+
+        // Also patch prepare_editorjs so our tool's page_data stays current
+        // on subsequent workspace navigations
+        var origPrepare = proto.prepare_editorjs;
+        proto.prepare_editorjs = function () {
+            var self = this;
+            if (this.editor) {
+                this.editor.isReady.then(function () {
+                    if (
+                        self.editor.configuration &&
+                        self.editor.configuration.tools &&
+                        self.editor.configuration.tools.shortcut_group
+                    ) {
+                        self.editor.configuration.tools.shortcut_group.config.page_data =
+                            self.page_data;
+                    }
+                });
+            }
+            origPrepare.call(this);
+        };
+
         proto._sgPatched = true;
         return true;
     }
 
-    // Poll until Workspace class is available
     if (!patchWorkspace()) {
         var iv = setInterval(function () {
             if (patchWorkspace()) clearInterval(iv);
