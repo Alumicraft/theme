@@ -2,7 +2,7 @@
 
 ## What this is
 
-A Frappe/ERPNext custom app that provides UI customizations: sidebar icons, shortcut groups, and theme styling. Installed via `bench get-app` into a Frappe site.
+A Frappe/ERPNext custom app that provides UI customizations: sidebar icons and theme styling. Installed via `bench get-app` into a Frappe site.
 
 ## Project structure
 
@@ -13,16 +13,11 @@ monocore_theme/
   install.py            # after_install / after_migrate: seeds settings, hides workspaces
   public/
     css/theme.css       # Sidebar icon styles (generic, works with JS injection)
-    css/shortcut_group.css
     js/sidebar_icons.js # Fetches icon map from API, injects Phosphor icons into sidebar
-    js/shortcut_group_renderer.js
-    js/shortcut_group_block.js
   monocore_theme/
     doctype/
       monocore_theme_settings/  # Single DocType: app configuration
       workspace_icon/           # Child table row: workspace name + icon_class
-      shortcut_group/           # DocType: groups of shortcut links
-      shortcut_group_item/      # Child table row for shortcut group
   patches/              # Data migration patches
 ```
 
@@ -62,9 +57,6 @@ Go to Monocore Theme Settings > workspace_icons table, change the `icon_class` f
 |--------|---------|
 | `get_workspace_icons` | Returns `{workspace: icon_class}` map |
 | `sync_workspace_icons` | Syncs icons table with current public workspaces |
-| `get_shortcut_groups(workspace)` | Returns shortcut groups for a workspace |
-| `save_shortcut_group(data)` | Create/update a shortcut group |
-| `delete_shortcut_group(name)` | Delete a shortcut group |
 
 ## Gotchas
 
