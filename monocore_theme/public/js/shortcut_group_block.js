@@ -1,171 +1,9 @@
-// Monocore Theme - Shortcut Group Block
-// EditorJS tool + workspace integration + dialog
+// Monocore Theme - Shortcut Group
+// Workspace integration + dialog
 
 frappe.provide("monocore_theme");
 
-// ─── EditorJS Tool Class ────────────────────────────────────────────────────
-
-monocore_theme.ShortcutGroupTool = class {
-    static get toolbox() {
-        return {
-            title: "Shortcut Group",
-            icon: '<svg width="17" height="15" viewBox="0 0 17 15" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="0.5" y="0.5" width="16" height="3.5" rx="1"/><rect x="0.5" y="5.75" width="16" height="3.5" rx="1"/><rect x="0.5" y="11" width="16" height="3.5" rx="1"/></svg>',
-        };
-    }
-
-    static get isReadOnlySupported() {
-        return true;
-    }
-
-    constructor({ data, api, readOnly }) {
-        this.data = data || {};
-        this.api = api;
-        this.readOnly = readOnly;
-        this.wrapper = null;
-    }
-
-    render() {
-        this.wrapper = document.createElement("div");
-        this.wrapper.classList.add("shortcut-group-editor-block");
-
-        if (this.data.shortcut_group_name) {
-            this._loadAndRender();
-        } else if (!this.readOnly) {
-            this._promptCreate();
-        }
-
-        return this.wrapper;
-    }
-
-    save() {
-        return {
-            shortcut_group_name: this.data.shortcut_group_name || "",
-        };
-    }
-
-    _loadAndRender() {
-        var self = this;
-        frappe
-            .xcall("frappe.client.get", {
-                doctype: "Shortcut Group",
-                name: this.data.shortcut_group_name,
-            })
-            .then(function (doc) {
-                self.wrapper.innerHTML = "";
-                new monocore_theme.ShortcutGroupRenderer(
-                    {
-                        name: doc.name,
-                        label: doc.label,
-                        links: (doc.links || []).map(function (l) {
-                            return {
-                                label: l.label,
-                                link_to: l.link_to,
-                                doctype_view: l.doctype_view || "List",
-                                color: l.color || "Grey",
-                                format: l.format || "",
-                                filters_json: l.filters_json || "{}",
-                            };
-                        }),
-                    },
-                    self.wrapper
-                );
-            })
-            .catch(function () {
-                self.wrapper.innerHTML =
-                    '<div style="padding:1rem;color:var(--text-muted);">Shortcut Group not found</div>';
-            });
-    }
-
-    _promptCreate() {
-        var self = this;
-        var route = frappe.get_route();
-        var workspace = route && route.length > 1 ? route.slice(1).join("/") : "";
-
-        monocore_theme.showShortcutGroupDialog(workspace, null, function (name) {
-            self.data.shortcut_group_name = name;
-            self._loadAndRender();
-        });
-    }
-};
-
-// ─── Patch Workspace editor to register our tool ────────────────────────────
-// Frappe v15 hardcodes the EditorJS tools list in initialize_editorjs().
-// EditorJS is imported as a module so window.EditorJS patching doesn't work.
-// Instead, we override initialize_editorjs to inject our tool before the
-// EditorJS instance is created.
-
-(function () {
-    function patchWorkspace() {
-        if (!frappe.views || !frappe.views.Workspace) return false;
-        var proto = frappe.views.Workspace.prototype;
-        if (proto._sgPatched) return true;
-
-        var origInit = proto.initialize_editorjs;
-        proto.initialize_editorjs = function (blocks) {
-            var self = this;
-
-            // Intercept the this.tools assignment via a property setter.
-            // When the original code does `this.tools = { ... }`, our setter
-            // injects shortcut_group before EditorJS reads the object.
-            Object.defineProperty(this, "tools", {
-                set: function (val) {
-                    val.shortcut_group = {
-                        class: monocore_theme.ShortcutGroupTool,
-                        config: { page_data: self.page_data || [] },
-                    };
-                    // Store on a backing field
-                    Object.defineProperty(self, "tools", {
-                        value: val,
-                        writable: true,
-                        configurable: true,
-                    });
-                },
-                get: function () {
-                    return undefined;
-                },
-                configurable: true,
-            });
-
-            // Call original — it sets this.tools (triggering our setter)
-            // then creates the EditorJS instance with the augmented tools
-            origInit.call(this, blocks);
-        };
-
-        // Also patch prepare_editorjs so our tool's page_data stays current
-        // on subsequent workspace navigations
-        var origPrepare = proto.prepare_editorjs;
-        proto.prepare_editorjs = function () {
-            var self = this;
-            if (this.editor) {
-                this.editor.isReady.then(function () {
-                    if (
-                        self.editor.configuration &&
-                        self.editor.configuration.tools &&
-                        self.editor.configuration.tools.shortcut_group
-                    ) {
-                        self.editor.configuration.tools.shortcut_group.config.page_data =
-                            self.page_data;
-                    }
-                });
-            }
-            origPrepare.call(this);
-        };
-
-        proto._sgPatched = true;
-        return true;
-    }
-
-    if (!patchWorkspace()) {
-        var iv = setInterval(function () {
-            if (patchWorkspace()) clearInterval(iv);
-        }, 200);
-        setTimeout(function () {
-            clearInterval(iv);
-        }, 30000);
-    }
-})();
-
-// ─── Also render saved groups on workspace view (non-edit) ──────────────────
+// ─── Render saved groups on workspace view ──────────────────────────────────
 
 $(document).on("page-change", function () {
     setTimeout(monocore_theme.loadShortcutGroups, 800);
@@ -182,9 +20,8 @@ monocore_theme.loadShortcutGroups = function () {
     }
     if (!workspaceName) return;
 
-    // Skip if already rendered or if editor blocks handle it
+    // Skip if already rendered
     if ($('.shortcut-groups-container[data-workspace="' + workspaceName + '"]').length) return;
-    if ($(".shortcut-group-editor-block").length) return;
 
     frappe
         .xcall("monocore_theme.api.get_shortcut_groups", {
@@ -193,7 +30,6 @@ monocore_theme.loadShortcutGroups = function () {
         .then(function (groups) {
             if (!groups || !groups.length) return;
             if ($('.shortcut-groups-container[data-workspace="' + workspaceName + '"]').length) return;
-            if ($(".shortcut-group-editor-block").length) return;
 
             var $target = $(".workspace-main-section .widget-group").first();
             var $container = $(
