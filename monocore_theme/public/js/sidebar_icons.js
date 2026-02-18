@@ -18,6 +18,7 @@
     };
 
     var settingsLoaded = false;
+    var swapping = false;
 
     function loadIconMap() {
         if (settingsLoaded) return;
@@ -36,6 +37,9 @@
     }
 
     function swapIcons() {
+        if (swapping) return;
+        swapping = true;
+
         document.querySelectorAll(".sidebar-item-container.is-draggable").forEach(function(item) {
             var name = item.getAttribute("item-name");
             if (!iconMap[name]) return;
@@ -55,28 +59,17 @@
             ph.style.cssText = "font-size: 16px; line-height: 1; color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px;";
             iconSpan.appendChild(ph);
         });
+
+        swapping = false;
     }
 
     // Load settings then swap on initial load
     setTimeout(loadIconMap, 500);
 
-    // Watch for Frappe re-rendering the sidebar and re-apply immediately
-    var observer = new MutationObserver(function() {
-        swapIcons();
-    });
+    // Poll to keep icons applied when Frappe re-renders the sidebar
+    setInterval(swapIcons, 500);
 
-    function observeSidebar() {
-        var sidebar = document.querySelector(".desk-sidebar");
-        if (sidebar) {
-            observer.observe(sidebar, { childList: true, subtree: true });
-            swapIcons();
-        } else {
-            setTimeout(observeSidebar, 200);
-        }
-    }
-    observeSidebar();
-
-    // Also hook into Frappe's route change
+    // Also hook into Frappe's route change for faster response
     $(document).on("page-change", function() {
         setTimeout(swapIcons, 300);
     });
