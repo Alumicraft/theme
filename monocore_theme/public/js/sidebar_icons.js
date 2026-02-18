@@ -51,9 +51,14 @@
         });
     }
 
-    // Fetch icons on page load, then poll for DOM re-renders
-    frappe.ready(function () {
-        fetchIcons();
-        setInterval(applySidebarIcons, 1000);
+    // Fetch icons on first desk page-change, re-apply on every navigation
+    $(document).on("page-change", function () {
+        if (!iconMap) {
+            fetchIcons();
+        }
+        applySidebarIcons();
     });
+
+    // Poll for Vue re-renders between navigations
+    setInterval(applySidebarIcons, 1000);
 })();
