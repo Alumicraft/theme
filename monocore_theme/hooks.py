@@ -9,7 +9,6 @@ app_license = "MIT"
 # ------------------
 
 app_include_css = [
-    "https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css",
     "/assets/monocore_theme/css/theme.css",
     "/assets/monocore_theme/css/shortcut_group.css",
 ]
