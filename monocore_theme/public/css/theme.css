@@ -1,134 +1,32 @@
 @import url("https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css");
 
-/* Monocore Theme - Pure CSS Sidebar Icons
-   Uses attribute selectors + ::before pseudo-elements so icons
-   survive Vue/Frappe DOM re-renders (no JS injection needed). */
+/* Monocore Theme - Dynamic Sidebar Icons
+   Icons are injected by sidebar_icons.js from Monocore Theme Settings. */
 
-/* ── Hide default SVG icons for mapped workspaces ── */
-.sidebar-item-container[item-name="Home"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Projects"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Sales"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Purchases"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Items"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Manufacturing"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Customers"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Accounting"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Users"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Terminal"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Stock"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Assets"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="HR"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Payroll"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="CRM"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Support"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Quality"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Website"] .sidebar-item-icon svg,
-.sidebar-item-container[item-name="Settings"] .sidebar-item-icon svg {
-    display: none !important;
-}
-
-/* ── Shared ::before styling ── */
-.sidebar-item-container[item-name="Home"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Projects"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Sales"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Purchases"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Items"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Manufacturing"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Customers"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Accounting"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Users"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Terminal"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Stock"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Assets"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="HR"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Payroll"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="CRM"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Support"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Quality"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Website"] .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Settings"] .sidebar-item-icon::before {
-    font-family: "Phosphor-Fill" !important;
-    font-style: normal;
-    font-weight: normal;
-    font-size: 14px;
+/* Style the injected Phosphor icon element */
+.desk-sidebar .sidebar-item-icon .ph-fill {
+    font-size: 20px;
     line-height: 1;
+    width: 20px;
+    height: 20px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 14px;
-    height: 14px;
     vertical-align: middle;
     color: var(--text-muted);
 }
 
-/* ── Per-workspace icon codepoints ── */
-.sidebar-item-container[item-name="Home"] .sidebar-item-icon::before { content: "\e2c2"; }
-.sidebar-item-container[item-name="Projects"] .sidebar-item-icon::before { content: "\e25a"; }
-.sidebar-item-container[item-name="Sales"] .sidebar-item-icon::before { content: "\e092"; }
-.sidebar-item-container[item-name="Purchases"] .sidebar-item-icon::before { content: "\e41e"; }
-.sidebar-item-container[item-name="Items"] .sidebar-item-icon::before { content: "\e390"; }
-.sidebar-item-container[item-name="Manufacturing"] .sidebar-item-icon::before { content: "\e760"; }
-.sidebar-item-container[item-name="Customers"] .sidebar-item-icon::before { content: "\e4d6"; }
-.sidebar-item-container[item-name="Accounting"] .sidebar-item-icon::before { content: "\e78e"; }
-.sidebar-item-container[item-name="Users"] .sidebar-item-icon::before { content: "\e4d0"; }
-.sidebar-item-container[item-name="Terminal"] .sidebar-item-icon::before { content: "\eae8"; }
-.sidebar-item-container[item-name="Stock"] .sidebar-item-icon::before { content: "\ecd4"; }
-.sidebar-item-container[item-name="Assets"] .sidebar-item-icon::before { content: "\e102"; }
-.sidebar-item-container[item-name="HR"] .sidebar-item-icon::before { content: "\e6f6"; }
-.sidebar-item-container[item-name="Payroll"] .sidebar-item-icon::before { content: "\e588"; }
-.sidebar-item-container[item-name="CRM"] .sidebar-item-icon::before { content: "\e582"; }
-.sidebar-item-container[item-name="Support"] .sidebar-item-icon::before { content: "\e584"; }
-.sidebar-item-container[item-name="Quality"] .sidebar-item-icon::before { content: "\e606"; }
-.sidebar-item-container[item-name="Website"] .sidebar-item-icon::before { content: "\e288"; }
-.sidebar-item-container[item-name="Settings"] .sidebar-item-icon::before { content: "\e270"; }
-
-/* ── Hover state ── */
-.sidebar-item-container[item-name="Home"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Projects"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Sales"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Purchases"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Items"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Manufacturing"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Customers"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Accounting"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Users"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Terminal"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Stock"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Assets"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="HR"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Payroll"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="CRM"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Support"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Quality"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Website"] .standard-sidebar-item:hover .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Settings"] .standard-sidebar-item:hover .sidebar-item-icon::before {
+/* Hover state */
+.desk-sidebar .standard-sidebar-item:hover .sidebar-item-icon .ph-fill {
     color: var(--text-color) !important;
 }
 
-/* ── Selected/active state ── */
-.sidebar-item-container[item-name="Home"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Projects"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Sales"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Purchases"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Items"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Manufacturing"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Customers"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Accounting"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Users"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Terminal"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Stock"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Assets"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="HR"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Payroll"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="CRM"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Support"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Quality"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Website"] .standard-sidebar-item.selected .sidebar-item-icon::before,
-.sidebar-item-container[item-name="Settings"] .standard-sidebar-item.selected .sidebar-item-icon::before {
+/* Selected/active state */
+.desk-sidebar .standard-sidebar-item.selected .sidebar-item-icon .ph-fill {
     color: var(--text-color) !important;
 }
 
-/* ── Icon container spacing ── */
+/* Icon container spacing */
 .desk-sidebar .sidebar-item-icon {
     margin-right: var(--margin-sm);
 }
