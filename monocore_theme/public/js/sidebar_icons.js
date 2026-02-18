@@ -48,7 +48,7 @@
             if (svg) svg.style.display = "none";
 
             var ph = document.createElement("i");
-            ph.className = "ph " + iconMap[name];
+            ph.className = "ph-fill " + iconMap[name];
             ph.style.cssText = "font-size: 20px; color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;";
             iconSpan.appendChild(ph);
             iconSpan.dataset.swapped = "true";
