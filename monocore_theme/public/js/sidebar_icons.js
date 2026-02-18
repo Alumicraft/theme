@@ -60,11 +60,23 @@
     // Load settings then swap on initial load
     setTimeout(loadIconMap, 500);
 
-    // Periodic check — Frappe re-renders the sidebar frequently and
-    // replaces the DOM, so poll to keep icons applied.
-    setInterval(swapIcons, 1000);
+    // Watch for Frappe re-rendering the sidebar and re-apply immediately
+    var observer = new MutationObserver(function() {
+        swapIcons();
+    });
 
-    // Also hook into Frappe's route change for faster response
+    function observeSidebar() {
+        var sidebar = document.querySelector(".desk-sidebar");
+        if (sidebar) {
+            observer.observe(sidebar, { childList: true, subtree: true });
+            swapIcons();
+        } else {
+            setTimeout(observeSidebar, 200);
+        }
+    }
+    observeSidebar();
+
+    // Also hook into Frappe's route change
     $(document).on("page-change", function() {
         setTimeout(swapIcons, 300);
     });
