@@ -3,14 +3,6 @@
 // Icon map is loaded from Monocore Theme Settings
 
 (function() {
-    // Ensure Phosphor Fill CSS is loaded (fallback if hooks.py include is cached)
-    if (!document.querySelector('link[href*="phosphor-icons"][href*="fill"]')) {
-        var link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = "https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css";
-        document.head.appendChild(link);
-    }
-
     // Fallback defaults used until settings are fetched
     var iconMap = {
         "Home": "ph-house",
