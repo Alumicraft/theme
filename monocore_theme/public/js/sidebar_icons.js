@@ -3,7 +3,7 @@
 // Icon map is loaded from Monocore Theme Settings
 
 (function() {
-    // Load Phosphor Fill CSS directly (bypasses Frappe asset pipeline caching)
+    // Ensure Phosphor Fill CSS is loaded (fallback if hooks.py include is cached)
     if (!document.querySelector('link[href*="phosphor-icons"][href*="fill"]')) {
         var link = document.createElement("link");
         link.rel = "stylesheet";
@@ -39,7 +39,6 @@
                 swapIcons();
             })
             .catch(function() {
-                // Settings not available yet — use defaults
                 swapIcons();
             });
     }
@@ -50,7 +49,11 @@
             if (!iconMap[name]) return;
 
             var iconSpan = item.querySelector("span.sidebar-item-icon");
-            if (!iconSpan || iconSpan.dataset.swapped) return;
+            if (!iconSpan) return;
+
+            // Check if already swapped with the correct icon
+            var existing = iconSpan.querySelector("i.ph-fill");
+            if (existing) return;
 
             var svg = iconSpan.querySelector("svg");
             if (svg) svg.style.display = "none";
@@ -59,45 +62,18 @@
             ph.className = "ph-fill " + iconMap[name];
             ph.style.cssText = "font-size: 16px; line-height: 1; color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px;";
             iconSpan.appendChild(ph);
-            iconSpan.dataset.swapped = "true";
         });
     }
 
     // Load settings then swap on initial load
     setTimeout(loadIconMap, 500);
-    setTimeout(swapIcons, 1500);
-    setTimeout(swapIcons, 3000);
 
-    // Watch for SPA page changes
-    var observer = new MutationObserver(function(mutations) {
-        var shouldSwap = mutations.some(function(m) {
-            return m.addedNodes.length > 0;
-        });
-        if (shouldSwap) {
-            setTimeout(swapIcons, 200);
-        }
-    });
+    // Periodic check — Frappe re-renders the sidebar frequently and
+    // replaces the DOM, so poll to keep icons applied.
+    setInterval(swapIcons, 1000);
 
-    document.addEventListener("DOMContentLoaded", function() {
-        var sidebar = document.querySelector(".desk-sidebar");
-        if (sidebar) {
-            observer.observe(sidebar, { childList: true, subtree: true });
-        } else {
-            var bodyObserver = new MutationObserver(function() {
-                var sb = document.querySelector(".desk-sidebar");
-                if (sb) {
-                    observer.observe(sb, { childList: true, subtree: true });
-                    bodyObserver.disconnect();
-                    swapIcons();
-                }
-            });
-            bodyObserver.observe(document.body, { childList: true, subtree: true });
-        }
-    });
-
-    // Hook into Frappe's route change
+    // Also hook into Frappe's route change for faster response
     $(document).on("page-change", function() {
         setTimeout(swapIcons, 300);
-        setTimeout(swapIcons, 800);
     });
 })();
