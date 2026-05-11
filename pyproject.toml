@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.bench]
-app-name = "monocore_theme"
+app-name = "backdesk"
 
 [tool.bench.frappe-dependencies]
 frappe = ">=15.0.0,<17.0.0"

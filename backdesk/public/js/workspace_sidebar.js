@@ -1,5 +1,5 @@
 /**
- * Monocore Theme workspace/sidebar fixes for Frappe v15/v16 Desk.
+ * Backdesk workspace/sidebar fixes for Frappe v15/v16 Desk.
  *
  * Keeps filtered sidebar navigation, duplicate DocType active states, and
  * workspace selection stable across List/Form route changes.
@@ -7,14 +7,14 @@
 (function () {
 	"use strict";
 
-	window.__monocore_sidebar_debug = window.__monocore_sidebar_debug || {};
-	window.__monocore_sidebar_debug.version = "20260511-3";
+	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
+	window.__backdesk_sidebar_debug.version = "20260511-3";
 
 	var _initialized = false;
 	var _last_clicked = null;
-	var ENTITY_WORKSPACE_PREFIX = "monocore_workspace_for_";
-	var DOCTYPE_MAP_KEY = "monocore_sidebar_fix_doctype_workspace";
-	var GLOBAL_KEY = "monocore_sidebar_fix_last_workspace";
+	var ENTITY_WORKSPACE_PREFIX = "backdesk_workspace_for_";
+	var DOCTYPE_MAP_KEY = "backdesk_sidebar_fix_doctype_workspace";
+	var GLOBAL_KEY = "backdesk_sidebar_fix_last_workspace";
 
 	function parse_filters(str) {
 		if (!str) return [];
@@ -370,7 +370,7 @@
 			var view = list_view_for_item(item, anchor);
 			frappe.route_options = opts;
 			track_click(label, item);
-			window.__monocore_sidebar_debug.lastClick = {
+			window.__backdesk_sidebar_debug.lastClick = {
 				label: label,
 				link_to: item.link_to,
 				view: view,
@@ -541,7 +541,7 @@
 		var sb = frappe.app.sidebar;
 		var correct = pick_correct_workspace();
 		if (!correct || sb.sidebar_title === correct) return;
-		var setup = sb._monocore_original_setup;
+		var setup = sb._backdesk_original_setup;
 		if (typeof setup !== "function" && typeof sb.setup === "function") setup = sb.setup.bind(sb);
 		if (typeof setup !== "function") return;
 		try {
@@ -552,7 +552,7 @@
 	function patch_workspace_switch() {
 		if (!frappe.app || !frappe.app.sidebar) return false;
 		var sb = frappe.app.sidebar;
-		if (sb._monocore_workspace_patched) return true;
+		if (sb._backdesk_workspace_patched) return true;
 		if (typeof sb.set_workspace_sidebar !== "function") return false;
 		if (typeof sb.setup !== "function") return false;
 
@@ -612,8 +612,8 @@
 			return original_setup(workspace_title);
 		};
 
-		sb._monocore_workspace_patched = true;
-		sb._monocore_original_setup = original_setup;
+		sb._backdesk_workspace_patched = true;
+		sb._backdesk_original_setup = original_setup;
 		return true;
 	}
 
@@ -626,7 +626,7 @@
 		try {
 			if (!frappe.ui || !frappe.ui.sidebar_item || !frappe.ui.sidebar_item.TypeLink) return false;
 			var proto = frappe.ui.sidebar_item.TypeLink.prototype;
-			if (proto._monocore_sidebar_fix_get_path_patched) return true;
+			if (proto._backdesk_sidebar_fix_get_path_patched) return true;
 			var original = proto.get_path;
 			if (typeof original !== "function") return false;
 			proto.get_path = function () {
@@ -636,7 +636,7 @@
 					return null;
 				}
 			};
-			proto._monocore_sidebar_fix_get_path_patched = true;
+			proto._backdesk_sidebar_fix_get_path_patched = true;
 			return true;
 		} catch (e) {
 			return false;
@@ -655,8 +655,8 @@
 			setTimeout(function () { try_watch_sidebar_title(n - 1); }, 300);
 			return;
 		}
-		if (el._monocore_title_watched) return;
-		el._monocore_title_watched = true;
+		if (el._backdesk_title_watched) return;
+		el._backdesk_title_watched = true;
 
 		var reverting = false;
 		var observer = new MutationObserver(function () {
@@ -672,30 +672,30 @@
 	}
 
 	function inject_workspace_fullbleed_styles() {
-		if (document.getElementById("monocore-workspace-fullbleed-js")) return;
+		if (document.getElementById("backdesk-workspace-fullbleed-js")) return;
 		var style = document.createElement("style");
-		style.id = "monocore-workspace-fullbleed-js";
+		style.id = "backdesk-workspace-fullbleed-js";
 		style.textContent = [
-			"body.monocore-workspace-fullbleed { --page-max-width: none; --content-width: 100%; --monocore-workspace-content-padding: clamp(16px, 1.5vw, 24px); }",
-			"body.monocore-workspace-fullbleed .main-section,",
-			"body.monocore-workspace-fullbleed .page-container,",
-			"body.monocore-workspace-fullbleed .page-wrapper,",
-			"body.monocore-workspace-fullbleed .page-content,",
-			"body.monocore-workspace-fullbleed .page-body,",
-			"body.monocore-workspace-fullbleed .container.page-body,",
-			"body.monocore-workspace-fullbleed .layout-main,",
-			"body.monocore-workspace-fullbleed .layout-main-section-wrapper,",
-			"body.monocore-workspace-fullbleed .layout-main-section,",
-			"body.monocore-workspace-fullbleed .layout-main-section > .container,",
-			"body.monocore-workspace-fullbleed .layout-main-section > .container-fluid {",
+			"body.backdesk-workspace-fullbleed { --page-max-width: none; --content-width: 100%; --backdesk-workspace-content-padding: clamp(16px, 1.5vw, 24px); }",
+			"body.backdesk-workspace-fullbleed .main-section,",
+			"body.backdesk-workspace-fullbleed .page-container,",
+			"body.backdesk-workspace-fullbleed .page-wrapper,",
+			"body.backdesk-workspace-fullbleed .page-content,",
+			"body.backdesk-workspace-fullbleed .page-body,",
+			"body.backdesk-workspace-fullbleed .container.page-body,",
+			"body.backdesk-workspace-fullbleed .layout-main,",
+			"body.backdesk-workspace-fullbleed .layout-main-section-wrapper,",
+			"body.backdesk-workspace-fullbleed .layout-main-section,",
+			"body.backdesk-workspace-fullbleed .layout-main-section > .container,",
+			"body.backdesk-workspace-fullbleed .layout-main-section > .container-fluid {",
 			"  max-width: none !important;",
 			"  width: 100% !important;",
 			"}",
-			"body.monocore-workspace-fullbleed .page-body,",
-			"body.monocore-workspace-fullbleed .container.page-body {",
+			"body.backdesk-workspace-fullbleed .page-body,",
+			"body.backdesk-workspace-fullbleed .container.page-body {",
 			"  box-sizing: border-box !important;",
-			"  padding-left: var(--monocore-workspace-content-padding, 20px) !important;",
-			"  padding-right: var(--monocore-workspace-content-padding, 20px) !important;",
+			"  padding-left: var(--backdesk-workspace-content-padding, 20px) !important;",
+			"  padding-right: var(--backdesk-workspace-content-padding, 20px) !important;",
 			"}",
 		].join("\n");
 		document.head.appendChild(style);
@@ -706,9 +706,9 @@
 			var route = frappe.get_route ? frappe.get_route() : [];
 			var is_workspace = !!workspace_slug_from_route(route);
 			if (!is_workspace && !route.length) is_workspace = !!document.querySelector(".workspace-body");
-			document.body.classList.toggle("monocore-workspace-fullbleed", is_workspace);
-			if (is_workspace) document.body.setAttribute("data-monocore-workspace-fullbleed", reason || "1");
-			else document.body.removeAttribute("data-monocore-workspace-fullbleed");
+			document.body.classList.toggle("backdesk-workspace-fullbleed", is_workspace);
+			if (is_workspace) document.body.setAttribute("data-backdesk-workspace-fullbleed", reason || "1");
+			else document.body.removeAttribute("data-backdesk-workspace-fullbleed");
 		} catch (e) {}
 	}
 

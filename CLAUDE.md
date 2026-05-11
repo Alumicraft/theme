@@ -1,22 +1,19 @@
-# Monocore Theme - Claude Code Guide
+# Backdesk - Claude Code Guide
 
 ## What this is
 
-A Frappe/ERPNext custom app that provides workspace styling and Desk sidebar behavior fixes. Installed via `bench get-app` into a Frappe site.
+A Frappe/ERPNext custom app branded as Backdesk that provides workspace styling and Desk sidebar behavior fixes. Installed via `bench get-app` into a Frappe site.
 
 ## Project structure
 
 ```
-monocore_theme/
+backdesk/
   hooks.py              # App entry point: CSS/JS includes, install hooks
   api.py                # Boot/session helpers and whitelisted overrides
   install.py            # after_install / after_migrate: hides replaced workspaces
   public/
     css/workspace_fullwidth.css  # Workspace shell/background/navbar styling
     js/workspace_sidebar.js      # Workspace sidebar navigation and switching fixes
-  monocore_theme/
-    doctype/
-      monocore_theme_settings/  # Single DocType reserved for app configuration
   patches/              # Data migration patches
 ```
 
@@ -32,7 +29,7 @@ The old custom sidebar-icon injection path has been removed. Frappe v16 native w
 
 ### Build assets after CSS/JS changes
 ```bash
-bench build --app monocore_theme
+bench build --app backdesk
 ```
 
 ### Full site rebuild

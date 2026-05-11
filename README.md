@@ -1,6 +1,6 @@
-# Monocore Theme
+# Backdesk
 
-Custom UI theme and customizations for ERPNext.
+Backdesk workspace customizations for ERPNext.
 
 ## Features
 - Workspace styling tweaks
@@ -8,7 +8,7 @@ Custom UI theme and customizations for ERPNext.
 
 ## Installation
 bench get-app https://github.com/Alumicraft/theme
-bench --site YOUR_SITE install-app monocore_theme
+bench --site YOUR_SITE install-app backdesk
 
 ## License
 MIT
