@@ -5,7 +5,7 @@ app_description = "Custom UI theme and customizations for ERPNext"
 app_email = "hello@monocore.com"
 app_license = "MIT"
 
-MONOCORE_ASSET_VERSION = "20260511-2"
+MONOCORE_ASSET_VERSION = "20260511-3"
 
 
 def versioned_asset(path):
@@ -16,13 +16,19 @@ def versioned_asset(path):
 # ------------------
 
 app_include_css = [
-    "https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css",
-    versioned_asset("/assets/monocore_theme/css/theme.css"),
     versioned_asset("/assets/monocore_theme/css/workspace_fullwidth.css"),
 ]
 app_include_js = [
-    versioned_asset("/assets/monocore_theme/js/sidebar_icons.js"),
+    versioned_asset("/assets/monocore_theme/js/workspace_sidebar.js"),
 ]
+
+boot_session = "monocore_theme.api.boot_session"
+
+override_whitelisted_methods = {
+    "frappe.desk.doctype.desktop_layout.desktop_layout.get_layout": (
+        "monocore_theme.api.get_layout_with_icons"
+    )
+}
 
 # Install
 # -------

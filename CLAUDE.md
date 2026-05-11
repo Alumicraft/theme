@@ -2,35 +2,31 @@
 
 ## What this is
 
-A Frappe/ERPNext custom app that provides UI customizations: sidebar icons and theme styling. Installed via `bench get-app` into a Frappe site.
+A Frappe/ERPNext custom app that provides workspace styling and Desk sidebar behavior fixes. Installed via `bench get-app` into a Frappe site.
 
 ## Project structure
 
 ```
 monocore_theme/
   hooks.py              # App entry point: CSS/JS includes, install hooks
-  api.py                # Whitelisted API endpoints (frappe.call targets)
-  install.py            # after_install / after_migrate: seeds settings, hides workspaces
+  api.py                # Boot/session helpers and whitelisted overrides
+  install.py            # after_install / after_migrate: hides replaced workspaces
   public/
-    css/theme.css       # Sidebar icon styles (generic, works with JS injection)
-    js/sidebar_icons.js # Fetches icon map from API, injects Phosphor icons into sidebar
+    css/workspace_fullwidth.css  # Workspace shell/background/navbar styling
+    js/workspace_sidebar.js      # Workspace sidebar navigation and switching fixes
   monocore_theme/
     doctype/
-      monocore_theme_settings/  # Single DocType: app configuration
-      workspace_icon/           # Child table row: workspace name + icon_class
+      monocore_theme_settings/  # Single DocType reserved for app configuration
   patches/              # Data migration patches
 ```
 
 ## Key architectural decisions
 
-### Sidebar icons are JS-driven, not CSS-driven
-`sidebar_icons.js` calls `monocore_theme.api.get_workspace_icons` to get a `{workspace: icon_class}` map from the database, then injects `<i class="ph-fill ph-{name}">` elements into the sidebar DOM. This makes icons configurable from Monocore Theme Settings without rebuilding assets.
+### Workspace sidebar fixes are bundled separately
+`workspace_sidebar.js` is focused on Frappe Desk workspace behavior: filtered sidebar links, duplicate DocType active states, workspace selection on List/Form routes, and route-scoped workspace full-width class toggling.
 
-### Phosphor Icons (Fill variant)
-Icons use [Phosphor Icons](https://phosphoricons.com/) fill variant. The CDN CSS is loaded both via `hooks.py` (`app_include_css`) and via `@import` in `theme.css`. Icon classes follow the pattern `ph-{name}` (e.g., `ph-house`, `ph-gear`). The full mapping of defaults lives in `install.py:KNOWN_ICONS`.
-
-### setInterval polling for sidebar DOM
-The sidebar is rendered by Vue and Frappe re-renders it unpredictably. `sidebar_icons.js` uses `setInterval` (1s) to re-apply icons after re-renders. This is intentional - MutationObserver was tried and reverted (see git history).
+### Sidebar icons are native
+The old custom sidebar-icon injection path has been removed. Frappe v16 native workspace/sidebar icon behavior is the source of truth.
 
 ## Common workflows
 
@@ -44,23 +40,15 @@ bench build --app monocore_theme
 bench build && bench clear-cache
 ```
 
-### Add a new default workspace icon
-1. Add entry to `KNOWN_ICONS` dict in `install.py`
-2. No CSS changes needed - the JS approach handles it automatically
-
-### Change an icon at runtime
-Go to Monocore Theme Settings > workspace_icons table, change the `icon_class` field, save, refresh the page.
-
 ## API endpoints (all in api.py)
 
 | Method | Purpose |
 |--------|---------|
-| `get_workspace_icons` | Returns `{workspace: icon_class}` map |
-| `sync_workspace_icons` | Syncs icons table with current public workspaces |
+| `boot_session` | Normalizes workspace sidebar boot data and desktop icon image fallbacks |
+| `get_layout_with_icons` | Merges Desktop Icon image fields into Desktop Layout JSON |
 
 ## Gotchas
 
 - `hooks.py` `app_include_css` and `app_include_js` control what gets bundled. After editing, run `bench build`.
-- The Phosphor CDN URL is pinned to `@2.1.1` in both `hooks.py` and `theme.css`.
-- `after_install` also runs `after_migrate` (both point to same function). It seeds workspace_icons only if the table is empty.
+- `after_install` also runs `after_migrate` (both point to same function). It removes the app workspace and hides replaced standard workspaces.
 - `HIDDEN_WORKSPACES` in `install.py` hides default Frappe workspaces that have custom replacements (e.g., "Buying" replaced by "Sales").

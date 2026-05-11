@@ -3,8 +3,8 @@
 Custom UI theme and customizations for ERPNext.
 
 ## Features
-- Custom sidebar icons (Phosphor Icons)
 - Workspace styling tweaks
+- Frappe v15/v16 workspace sidebar navigation fixes
 
 ## Installation
 bench get-app https://github.com/Alumicraft/theme

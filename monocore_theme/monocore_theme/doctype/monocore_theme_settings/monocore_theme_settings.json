@@ -4,24 +4,8 @@
  "creation": "2026-02-17 00:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": [
-  "sidebar_icons_section",
-  "workspace_icons"
- ],
- "fields": [
-  {
-   "fieldname": "sidebar_icons_section",
-   "fieldtype": "Section Break",
-   "label": "Sidebar Icons"
-  },
-  {
-   "description": "Map each workspace to a Phosphor icon class. Browse icons at https://phosphoricons.com",
-   "fieldname": "workspace_icons",
-   "fieldtype": "Table",
-   "label": "Workspace Icons",
-   "options": "Workspace Icon"
-  }
- ],
+ "field_order": [],
+ "fields": [],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
