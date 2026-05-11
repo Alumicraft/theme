@@ -1,0 +1,133 @@
+/*
+ * Workspace Full-Width Override
+ *
+ * ERPNext/Frappe v16 workspace dashboards can look cramped when the standard
+ * Desk page shell stays at the normal contained width. Scope this to workspace
+ * routes and widen only page-shell containers so Forms, Lists, Reports, and
+ * workspace card/chart internals keep their normal layout behavior.
+ */
+
+body.monocore-workspace-fullbleed {
+    --page-max-width: none;
+    --content-width: 100%;
+    --monocore-workspace-content-padding: clamp(16px, 1.5vw, 24px);
+    --monocore-workspace-bg: #f7f8fa;
+    --monocore-workspace-navbar-bg: #ffffff;
+    --monocore-workspace-border: rgba(15, 23, 42, 0.08);
+    --monocore-workspace-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+body:has(.workspace-body) {
+    --monocore-workspace-content-padding: clamp(16px, 1.5vw, 24px);
+    --monocore-workspace-bg: #f7f8fa;
+    --monocore-workspace-navbar-bg: #ffffff;
+    --monocore-workspace-border: rgba(15, 23, 42, 0.08);
+    --monocore-workspace-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+html[data-theme="dark"] body.monocore-workspace-fullbleed,
+html[data-theme="dark"] body:has(.workspace-body) {
+    --monocore-workspace-bg: #111418;
+    --monocore-workspace-navbar-bg: #171b20;
+    --monocore-workspace-border: rgba(255, 255, 255, 0.08);
+    --monocore-workspace-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+body.monocore-workspace-fullbleed .main-section,
+body.monocore-workspace-fullbleed .page-container,
+body.monocore-workspace-fullbleed .page-wrapper,
+body.monocore-workspace-fullbleed .page-content,
+body[data-route^="Workspaces/"] .main-section,
+body[data-route^="Workspaces/"] .page-container,
+body[data-route^="Workspaces/"] .page-wrapper,
+body[data-route^="Workspaces/"] .page-content,
+body:has(.workspace-body) .main-section,
+body:has(.workspace-body) .page-container,
+body:has(.workspace-body) .page-wrapper,
+body:has(.workspace-body) .page-content {
+    background: var(--monocore-workspace-bg) !important;
+}
+
+body.monocore-workspace-fullbleed .navbar,
+body[data-route^="Workspaces/"] .navbar,
+body:has(.workspace-body) .navbar {
+    background: var(--monocore-workspace-navbar-bg) !important;
+    border-bottom: 1px solid var(--monocore-workspace-border) !important;
+    box-shadow: var(--monocore-workspace-shadow) !important;
+}
+
+body.monocore-workspace-fullbleed .main-section,
+body.monocore-workspace-fullbleed .page-container,
+body.monocore-workspace-fullbleed .page-wrapper,
+body.monocore-workspace-fullbleed .page-content,
+body.monocore-workspace-fullbleed .page-body,
+body.monocore-workspace-fullbleed .container.page-body,
+body.monocore-workspace-fullbleed .layout-main,
+body.monocore-workspace-fullbleed .layout-main-section-wrapper,
+body.monocore-workspace-fullbleed .layout-main-section,
+body.monocore-workspace-fullbleed .layout-main-section > .container,
+body.monocore-workspace-fullbleed .layout-main-section > .container-fluid,
+body[data-route^="Workspaces/"] .main-section,
+body[data-route^="Workspaces/"] .page-container,
+body[data-route^="Workspaces/"] .page-wrapper,
+body[data-route^="Workspaces/"] .page-content,
+body[data-route^="Workspaces/"] .page-body,
+body[data-route^="Workspaces/"] .container.page-body,
+body[data-route^="Workspaces/"] .layout-main,
+body[data-route^="Workspaces/"] .layout-main-section-wrapper,
+body[data-route^="Workspaces/"] .layout-main-section,
+body[data-route^="Workspaces/"] .layout-main-section > .container,
+body[data-route^="Workspaces/"] .layout-main-section > .container-fluid {
+    max-width: none !important;
+    width: 100% !important;
+}
+
+body.monocore-workspace-fullbleed .page-body,
+body.monocore-workspace-fullbleed .container.page-body,
+body[data-route^="Workspaces/"] .page-body,
+body[data-route^="Workspaces/"] .container.page-body {
+    box-sizing: border-box !important;
+    padding-left: var(--monocore-workspace-content-padding, 20px) !important;
+    padding-right: var(--monocore-workspace-content-padding, 20px) !important;
+}
+
+body.monocore-workspace-fullbleed[data-route="Workspaces/Map"] .page-body,
+body.monocore-workspace-fullbleed[data-route="Workspaces/Map"] .container.page-body,
+body[data-route="Workspaces/Map"] .page-body,
+body[data-route="Workspaces/Map"] .container.page-body {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+body:has(.workspace-body) .main-section,
+body:has(.workspace-body) .page-container,
+body:has(.workspace-body) .page-wrapper,
+body:has(.workspace-body) .page-content,
+body:has(.workspace-body) .page-body,
+body:has(.workspace-body) .container.page-body,
+body:has(.workspace-body) .layout-main,
+body:has(.workspace-body) .layout-main-section-wrapper,
+body:has(.workspace-body) .layout-main-section,
+body:has(.workspace-body) .layout-main-section > .container,
+body:has(.workspace-body) .layout-main-section > .container-fluid {
+    max-width: none !important;
+    width: 100% !important;
+}
+
+body:has(.workspace-body) .page-body,
+body:has(.workspace-body) .container.page-body {
+    box-sizing: border-box !important;
+    padding-left: var(--monocore-workspace-content-padding, 20px) !important;
+    padding-right: var(--monocore-workspace-content-padding, 20px) !important;
+}
+
+body[data-route="Workspaces/Map"]:has(.workspace-body) .page-body,
+body[data-route="Workspaces/Map"]:has(.workspace-body) .container.page-body {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+body.monocore-workspace-fullbleed[data-route="Workspaces/Map"] .widget.custom-block-widget-box,
+body[data-route="Workspaces/Map"] .widget.custom-block-widget-box {
+    padding: 0 !important;
+}
