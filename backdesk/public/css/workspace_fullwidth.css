@@ -11,26 +11,26 @@ body.backdesk-workspace-fullbleed {
     --page-max-width: none;
     --content-width: 100%;
     --backdesk-workspace-content-padding: clamp(16px, 1.5vw, 24px);
-    --backdesk-workspace-bg: #f7f8fa;
-    --backdesk-workspace-navbar-bg: #ffffff;
-    --backdesk-workspace-border: rgba(15, 23, 42, 0.08);
+    --backdesk-workspace-bg: var(--bg-color, #f7f8fa);
+    --backdesk-workspace-navbar-bg: var(--fg-color, #ffffff);
+    --backdesk-workspace-border: var(--border-color, rgba(15, 23, 42, 0.08));
     --backdesk-workspace-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
 }
 
 body:has(.workspace-body) {
     --backdesk-workspace-content-padding: clamp(16px, 1.5vw, 24px);
-    --backdesk-workspace-bg: #f7f8fa;
-    --backdesk-workspace-navbar-bg: #ffffff;
-    --backdesk-workspace-border: rgba(15, 23, 42, 0.08);
+    --backdesk-workspace-bg: var(--bg-color, #f7f8fa);
+    --backdesk-workspace-navbar-bg: var(--fg-color, #ffffff);
+    --backdesk-workspace-border: var(--border-color, rgba(15, 23, 42, 0.08));
     --backdesk-workspace-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
 }
 
 html[data-theme="dark"] body.backdesk-workspace-fullbleed,
 html[data-theme="dark"] body:has(.workspace-body) {
-    --backdesk-workspace-bg: #111418;
-    --backdesk-workspace-navbar-bg: #171b20;
-    --backdesk-workspace-border: rgba(255, 255, 255, 0.08);
-    --backdesk-workspace-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+    --backdesk-workspace-bg: var(--bg-color, #171717);
+    --backdesk-workspace-navbar-bg: var(--fg-color, #171717);
+    --backdesk-workspace-border: var(--border-color, rgba(255, 255, 255, 0.08));
+    --backdesk-workspace-shadow: none;
 }
 
 body.backdesk-workspace-fullbleed .main-section,

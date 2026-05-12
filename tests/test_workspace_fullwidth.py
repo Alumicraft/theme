@@ -30,6 +30,11 @@ def test_workspace_fullwidth_css_styles_workspace_background_and_navbar_only():
     assert 'body[data-route^="Workspaces/"] .navbar' in css
     assert "body:has(.workspace-body) .navbar" in css
     assert 'html[data-theme="dark"] body.backdesk-workspace-fullbleed' in css
+    assert "--backdesk-workspace-bg: var(--bg-color" in css
+    assert "--backdesk-workspace-navbar-bg: var(--fg-color" in css
+    assert "--backdesk-workspace-border: var(--border-color" in css
+    assert "#111418" not in css
+    assert "#171b20" not in css
     assert "body .navbar {" not in css
     assert "body .page-container {" not in css
 
