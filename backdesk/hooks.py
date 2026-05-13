@@ -5,7 +5,7 @@ app_description = "Backdesk workspace customizations for ERPNext"
 app_email = "hello@backdesk.com"
 app_license = "MIT"
 
-BACKDESK_ASSET_VERSION = "20260512-9"
+BACKDESK_ASSET_VERSION = "20260512-10"
 
 
 def versioned_asset(path):
@@ -27,7 +27,8 @@ boot_session = "backdesk.api.boot_session"
 override_whitelisted_methods = {
     "frappe.desk.doctype.desktop_layout.desktop_layout.get_layout": (
         "backdesk.api.get_layout_with_icons"
-    )
+    ),
+    "frappe.desk.doctype.workspace.workspace.save_page": "backdesk.api.save_workspace_page",
 }
 
 # Install

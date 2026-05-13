@@ -66,6 +66,7 @@ def test_workspace_sidebar_js_ports_generic_navigation_fixes():
     assert "frappe.route_options = opts" in js
     assert "patch_workspace_switch" in js
     assert "patch_workspace_save_page" in js
+    assert "backdesk.api.save_workspace_page" in js
     assert "response && response.exc" in js
     assert "current_content === content" in js
     assert '__("No changes made")' in js
@@ -101,6 +102,8 @@ def test_hooks_include_versioned_workspace_assets():
     assert "boot_session = \"backdesk.api.boot_session\"" in hooks
     assert '"frappe.desk.doctype.desktop_layout.desktop_layout.get_layout":' in compact_hooks
     assert '"backdesk.api.get_layout_with_icons"' in compact_hooks
+    assert '"frappe.desk.doctype.workspace.workspace.save_page":' in compact_hooks
+    assert '"backdesk.api.save_workspace_page"' in compact_hooks
 
 
 def test_sidebar_icon_assets_are_not_bundled():
@@ -145,6 +148,17 @@ def test_api_contains_boot_sidebar_cleanup_and_desktop_icon_override():
     assert "def get_layout_with_icons():" in api
     assert '"Desktop Layout"' in api
     assert '"Desktop Icon"' in api
+
+
+def test_api_contains_workspace_save_override():
+    api = read("backdesk/api.py")
+
+    assert "def save_workspace_page(" in api
+    assert "def _can_edit_workspace(doc):" in api
+    assert "is_workspace_manager()" in api
+    assert "doc.content = blocks" in api
+    assert "save_new_widget(doc, name, blocks, new_widgets or {})" in api
+    assert "frappe.PermissionError" in api
 
 
 def test_pyproject_allows_erpnext_v16():

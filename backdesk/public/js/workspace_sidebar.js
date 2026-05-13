@@ -683,7 +683,7 @@
 						}
 
 						var request = frappe.call({
-							method: "frappe.desk.doctype.workspace.workspace.save_page",
+							method: "backdesk.api.save_workspace_page",
 							args: {
 								name: page.name,
 								public: page.public || 0,

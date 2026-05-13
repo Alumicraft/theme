@@ -1,4 +1,7 @@
 import frappe
+from frappe import _
+from frappe.desk.desktop import save_new_widget
+from frappe.desk.doctype.workspace.workspace import is_workspace_manager
 
 
 def _boot_value(bootinfo, key, default=None):
@@ -43,6 +46,35 @@ def boot_session(bootinfo):
     sidebar_items = _boot_value(bootinfo, "workspace_sidebar_item", {}) or {}
     for _name, sidebar in sidebar_items.items():
         sidebar["items"] = _normalize_sidebar_items(sidebar.get("items") or [])
+
+
+def _can_edit_workspace(doc):
+    if doc.public:
+        return is_workspace_manager()
+    if doc.for_user == frappe.session.user:
+        return True
+    return is_workspace_manager()
+
+
+@frappe.whitelist()
+def save_workspace_page(name, public=0, new_widgets=None, blocks=None):
+    """Save workspace editor blocks with Frappe v16 public workspace permissions."""
+    public = frappe.parse_json(public)
+    doc = frappe.get_doc("Workspace", name)
+
+    if not _can_edit_workspace(doc):
+        frappe.throw(
+            _("Not permitted to edit Workspace {0}").format(frappe.bold(name)),
+            frappe.PermissionError,
+        )
+
+    if not doc.type:
+        doc.type = "Workspace"
+
+    doc.content = blocks
+    save_new_widget(doc, name, blocks, new_widgets or {})
+
+    return {"name": name, "public": public, "label": doc.label}
 
 
 @frappe.whitelist()
