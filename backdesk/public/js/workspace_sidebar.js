@@ -622,6 +622,88 @@
 		if (!patch_workspace_switch()) setTimeout(function () { try_patch_workspace_switch(n - 1); }, 300);
 	}
 
+	function patch_workspace_save_page() {
+		try {
+			if (!frappe.workspace || typeof frappe.workspace.save_page !== "function") return false;
+			var ws = frappe.workspace;
+			if (ws._backdesk_save_page_patched) return true;
+
+			ws.save_page = function (page) {
+				var workspace = this;
+				workspace.current_page = { name: page.name, public: page.public };
+
+				return workspace.editor.save().then(function (output) {
+					var new_widgets = {};
+					output.blocks.forEach(function (block) {
+						if (!block.data.new) return;
+						if (!new_widgets[block.type]) new_widgets[block.type] = [];
+						new_widgets[block.type].push(block.data.new);
+						delete block.data.new;
+					});
+
+					var blocks = output.blocks.filter(function (block) {
+						return (
+							block.type !== "card" ||
+							(block.data.card_name !== "Custom Documents" && block.data.card_name !== "Custom Reports")
+						);
+					});
+					var content = JSON.stringify(blocks);
+					if (page.content === content && Object.keys(new_widgets).length === 0) {
+						frappe.show_alert({ message: __("No changes made"), indicator: "warning" });
+						return false;
+					}
+
+					workspace.create_page_skeleton();
+					page.content = content;
+
+					return new Promise(function (resolve) {
+						frappe.call({
+							method: "frappe.desk.doctype.workspace.workspace.save_page",
+							args: {
+								name: page.name,
+								public: page.public || 0,
+								new_widgets: new_widgets,
+								blocks: content,
+							},
+							callback: function (response) {
+								if (response && response.exc) {
+									workspace.reload();
+									resolve(false);
+									return;
+								}
+
+								workspace.discard = true;
+								workspace.reload();
+								if (!window.Cypress) {
+									frappe.show_alert({ message: __("Saved"), indicator: "green" });
+									if (page.public) frappe.set_route("desk", frappe.router.slug(page.name));
+									else frappe.set_route("desk", "private", frappe.router.slug(page.name));
+								}
+								resolve(true);
+							},
+							error: function () {
+								workspace.reload();
+								resolve(false);
+							},
+						});
+					});
+				}).catch(function () {
+					return false;
+				});
+			};
+
+			ws._backdesk_save_page_patched = true;
+			return true;
+		} catch (e) {
+			return false;
+		}
+	}
+
+	function try_patch_workspace_save_page(n) {
+		if (n <= 0) return;
+		if (!patch_workspace_save_page()) setTimeout(function () { try_patch_workspace_save_page(n - 1); }, 300);
+	}
+
 	function patch_typelink_get_path() {
 		try {
 			if (!frappe.ui || !frappe.ui.sidebar_item || !frappe.ui.sidebar_item.TypeLink) return false;
@@ -722,6 +804,7 @@
 		set_workspace_fullbleed_class("init");
 		try_patch_typelink_get_path(20);
 		try_patch_workspace_switch(20);
+		try_patch_workspace_save_page(20);
 		try_watch_sidebar_title(20);
 		$(window).on("beforeunload", save_last_workspace);
 

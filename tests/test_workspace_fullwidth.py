@@ -65,6 +65,9 @@ def test_workspace_sidebar_js_ports_generic_navigation_fixes():
     assert "route_options_from_item" in js
     assert "frappe.route_options = opts" in js
     assert "patch_workspace_switch" in js
+    assert "patch_workspace_save_page" in js
+    assert "response && response.exc" in js
+    assert "workspace.reload()" in js
     assert "set_workspace_sidebar" in js
     assert "pick_correct_workspace" in js
     assert "fix_active" in js
