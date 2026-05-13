@@ -5,7 +5,7 @@ app_description = "Backdesk workspace customizations for ERPNext"
 app_email = "hello@backdesk.com"
 app_license = "MIT"
 
-BACKDESK_ASSET_VERSION = "20260512-7"
+BACKDESK_ASSET_VERSION = "20260512-8"
 
 
 def versioned_asset(path):

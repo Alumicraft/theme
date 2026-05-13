@@ -648,7 +648,8 @@
 						);
 					});
 					var content = JSON.stringify(blocks);
-					if (page.content === content && Object.keys(new_widgets).length === 0) {
+					var current_content = typeof page.content === "string" ? page.content : JSON.stringify(page.content || []);
+					if (current_content === content && Object.keys(new_widgets).length === 0) {
 						frappe.show_alert({ message: __("No changes made"), indicator: "warning" });
 						return false;
 					}
@@ -657,7 +658,31 @@
 					page.content = content;
 
 					return new Promise(function (resolve) {
-						frappe.call({
+						var completed = false;
+						function finish(saved) {
+							if (completed) return;
+							completed = true;
+							resolve(saved);
+						}
+
+						function handle_success(response) {
+							if (response && response.exc) {
+								workspace.reload();
+								finish(false);
+								return;
+							}
+
+							workspace.discard = true;
+							workspace.reload();
+							if (!window.Cypress) {
+								frappe.show_alert({ message: __("Saved"), indicator: "green" });
+								if (page.public) frappe.set_route("desk", frappe.router.slug(page.name));
+								else frappe.set_route("desk", "private", frappe.router.slug(page.name));
+							}
+							finish(true);
+						}
+
+						var request = frappe.call({
 							method: "frappe.desk.doctype.workspace.workspace.save_page",
 							args: {
 								name: page.name,
@@ -665,27 +690,18 @@
 								new_widgets: new_widgets,
 								blocks: content,
 							},
-							callback: function (response) {
-								if (response && response.exc) {
-									workspace.reload();
-									resolve(false);
-									return;
-								}
-
-								workspace.discard = true;
-								workspace.reload();
-								if (!window.Cypress) {
-									frappe.show_alert({ message: __("Saved"), indicator: "green" });
-									if (page.public) frappe.set_route("desk", frappe.router.slug(page.name));
-									else frappe.set_route("desk", "private", frappe.router.slug(page.name));
-								}
-								resolve(true);
-							},
+							callback: handle_success,
 							error: function () {
 								workspace.reload();
-								resolve(false);
+								finish(false);
 							},
 						});
+						if (request && typeof request.then === "function") {
+							request.then(handle_success).catch(function () {
+								workspace.reload();
+								finish(false);
+							});
+						}
 					});
 				}).catch(function () {
 					return false;

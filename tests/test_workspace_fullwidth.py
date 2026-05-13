@@ -67,6 +67,9 @@ def test_workspace_sidebar_js_ports_generic_navigation_fixes():
     assert "patch_workspace_switch" in js
     assert "patch_workspace_save_page" in js
     assert "response && response.exc" in js
+    assert "current_content === content" in js
+    assert "request.then(handle_success)" in js
+    assert "finish(true)" in js
     assert "workspace.reload()" in js
     assert "set_workspace_sidebar" in js
     assert "pick_correct_workspace" in js
