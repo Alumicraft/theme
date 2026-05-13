@@ -26,6 +26,11 @@ def test_workspace_fullwidth_css_styles_workspace_background_and_navbar_only():
 
     assert "--backdesk-workspace-bg" in css
     assert "--backdesk-workspace-navbar-bg" in css
+    assert "body.backdesk-workspace-fullbleed .page-head" in css
+    assert 'body[data-route^="Workspaces/"] .page-head' in css
+    assert "body:has(.workspace-body) .page-head" in css
+    assert "body.backdesk-workspace-fullbleed .layout-main-section" in css
+    assert 'body[data-route^="Workspaces/"] .layout-main-section' in css
     assert "body.backdesk-workspace-fullbleed .navbar" in css
     assert 'body[data-route^="Workspaces/"] .navbar' in css
     assert "body:has(.workspace-body) .navbar" in css

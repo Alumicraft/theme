@@ -42,15 +42,28 @@ body.backdesk-workspace-fullbleed .main-section,
 body.backdesk-workspace-fullbleed .page-container,
 body.backdesk-workspace-fullbleed .page-wrapper,
 body.backdesk-workspace-fullbleed .page-content,
+body.backdesk-workspace-fullbleed .page-head,
+body.backdesk-workspace-fullbleed .layout-main-section,
 body[data-route^="Workspaces/"] .main-section,
 body[data-route^="Workspaces/"] .page-container,
 body[data-route^="Workspaces/"] .page-wrapper,
 body[data-route^="Workspaces/"] .page-content,
+body[data-route^="Workspaces/"] .page-head,
+body[data-route^="Workspaces/"] .layout-main-section,
 body:has(.workspace-body) .main-section,
 body:has(.workspace-body) .page-container,
 body:has(.workspace-body) .page-wrapper,
-body:has(.workspace-body) .page-content {
+body:has(.workspace-body) .page-content,
+body:has(.workspace-body) .page-head,
+body:has(.workspace-body) .layout-main-section {
     background: var(--backdesk-workspace-bg) !important;
+}
+
+body.backdesk-workspace-fullbleed .page-head,
+body[data-route^="Workspaces/"] .page-head,
+body:has(.workspace-body) .page-head {
+    border-bottom: 1px solid var(--backdesk-workspace-border) !important;
+    box-shadow: var(--backdesk-workspace-shadow) !important;
 }
 
 body.backdesk-workspace-fullbleed .navbar,
