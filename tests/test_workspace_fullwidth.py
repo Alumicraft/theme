@@ -34,6 +34,8 @@ def test_workspace_fullwidth_css_styles_workspace_background_and_navbar_only():
     assert "body.backdesk-workspace-fullbleed .navbar" in css
     assert 'body[data-route^="Workspaces/"] .navbar' in css
     assert "body:has(.workspace-body) .navbar" in css
+    assert "body.backdesk-workspace-fullbleed [data-page-route=\"Workspaces\"] .widget.spacer" in css
+    assert 'body[data-route^="Workspaces/"] [data-page-route="Workspaces"] .widget.spacer' in css
     assert 'html[data-theme="dark"] body.backdesk-workspace-fullbleed' in css
     assert "--backdesk-workspace-bg: var(--surface-menu-bar" in css
     assert "--backdesk-workspace-navbar-bg: var(--surface-menu-bar" in css
@@ -42,6 +44,7 @@ def test_workspace_fullwidth_css_styles_workspace_background_and_navbar_only():
     assert "#171b20" not in css
     assert "body .navbar {" not in css
     assert "body .page-container {" not in css
+    assert "body.backdesk-workspace-fullbleed .widget {" not in css
 
 
 def test_workspace_sidebar_js_toggles_workspace_fullbleed_class():

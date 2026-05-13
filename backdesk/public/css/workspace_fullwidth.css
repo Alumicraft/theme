@@ -74,6 +74,13 @@ body:has(.workspace-body) .navbar {
     box-shadow: var(--backdesk-workspace-shadow) !important;
 }
 
+body.backdesk-workspace-fullbleed [data-page-route="Workspaces"] .widget.spacer,
+body[data-route^="Workspaces/"] [data-page-route="Workspaces"] .widget.spacer,
+body:has(.workspace-body) [data-page-route="Workspaces"] .widget.spacer {
+    background: var(--backdesk-workspace-bg) !important;
+    box-shadow: none !important;
+}
+
 body.backdesk-workspace-fullbleed .main-section,
 body.backdesk-workspace-fullbleed .page-container,
 body.backdesk-workspace-fullbleed .page-wrapper,
