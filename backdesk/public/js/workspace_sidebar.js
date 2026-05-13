@@ -651,7 +651,7 @@
 					var current_content = typeof page.content === "string" ? page.content : JSON.stringify(page.content || []);
 					if (current_content === content && Object.keys(new_widgets).length === 0) {
 						frappe.show_alert({ message: __("No changes made"), indicator: "warning" });
-						return false;
+						return true;
 					}
 
 					workspace.create_page_skeleton();
