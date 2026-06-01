@@ -113,6 +113,91 @@ def get_layout_with_icons():
     return layout
 
 
+def _payment_request_filter_exists(filters):
+    if isinstance(filters, dict):
+        return any((key or "").split(".")[-1].strip("`") == "status" for key in filters)
+    if not isinstance(filters, list):
+        return False
+
+    for condition in filters:
+        if not isinstance(condition, (list, tuple)):
+            continue
+        if len(condition) >= 4 and condition[0] == "Payment Request" and condition[1] == "status":
+            return True
+        if len(condition) == 3 and condition[0] == "status":
+            return True
+    return False
+
+
+def _normalize_reportview_filters(filters):
+    if isinstance(filters, list):
+        return filters
+    if not isinstance(filters, dict):
+        return []
+
+    normalized = []
+    for fieldname, value in filters.items():
+        if (
+            isinstance(value, (list, tuple))
+            and value
+            and str(value[0]).lower()
+            in ("=", ">", "<", ">=", "<=", "!=", "like", "not like", "in", "not in", "between", "is")
+        ):
+            normalized.append([fieldname, value[0], value[1] if len(value) > 1 else None])
+        else:
+            normalized.append([fieldname, "=", value])
+    return normalized
+
+
+def _append_payment_request_not_paid_filter():
+    """Force Payment Request list/reportview queries to exclude paid rows."""
+    import json
+
+    form_dict = frappe.local.form_dict
+    if form_dict.get("doctype") != "Payment Request":
+        return
+
+    filters = form_dict.get("filters")
+    if isinstance(filters, str) and filters:
+        filters = json.loads(filters)
+    elif not filters:
+        filters = []
+
+    filters = _normalize_reportview_filters(filters)
+
+    if not _payment_request_filter_exists(filters):
+        filters.append(["Payment Request", "status", "!=", "Paid"])
+
+    form_dict["filters"] = json.dumps(filters)
+
+
+@frappe.whitelist()
+@frappe.read_only()
+def reportview_get():
+    from frappe.desk import reportview
+
+    _append_payment_request_not_paid_filter()
+    return reportview.get()
+
+
+@frappe.whitelist()
+@frappe.read_only()
+def reportview_get_list():
+    from frappe.desk import reportview
+
+    _append_payment_request_not_paid_filter()
+    return reportview.get_list()
+
+
+@frappe.whitelist()
+@frappe.read_only()
+def reportview_get_count():
+    from frappe.desk import reportview
+
+    _append_payment_request_not_paid_filter()
+    return reportview.get_count()
+
+
 def payment_request_query_conditions(user=None):
     """Exclude paid Payment Requests from list/query views."""
     return "coalesce(`tabPayment Request`.`status`, '') != 'Paid'"

@@ -33,6 +33,9 @@ override_whitelisted_methods = {
         "backdesk.api.get_layout_with_icons"
     ),
     "frappe.desk.doctype.workspace.workspace.save_page": "backdesk.api.save_workspace_page",
+    "frappe.desk.reportview.get": "backdesk.api.reportview_get",
+    "frappe.desk.reportview.get_count": "backdesk.api.reportview_get_count",
+    "frappe.desk.reportview.get_list": "backdesk.api.reportview_get_list",
 }
 
 permission_query_conditions = {

@@ -182,6 +182,24 @@ def test_payment_request_query_condition_excludes_paid():
     assert "!= 'Paid'" in api
 
 
+def test_payment_request_reportview_override_excludes_paid():
+    hooks = read("backdesk/hooks.py")
+    api = read("backdesk/api.py")
+
+    assert '"frappe.desk.reportview.get": "backdesk.api.reportview_get"' in hooks
+    assert '"frappe.desk.reportview.get_count": "backdesk.api.reportview_get_count"' in hooks
+    assert '"frappe.desk.reportview.get_list": "backdesk.api.reportview_get_list"' in hooks
+    assert "def _append_payment_request_not_paid_filter():" in api
+    assert 'form_dict.get("doctype") != "Payment Request"' in api
+    assert '["Payment Request", "status", "!=", "Paid"]' in api
+    assert "def reportview_get():" in api
+    assert "def reportview_get_count():" in api
+    assert "def reportview_get_list():" in api
+    assert "return reportview.get()" in api
+    assert "return reportview.get_count()" in api
+    assert "return reportview.get_list()" in api
+
+
 def test_api_contains_boot_sidebar_cleanup_and_desktop_icon_override():
     api = read("backdesk/api.py")
 
