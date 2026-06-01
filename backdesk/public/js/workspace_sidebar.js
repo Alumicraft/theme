@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260512-3";
+	window.__backdesk_sidebar_debug.version = "20260601-1";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -181,6 +181,35 @@
 			}
 		}
 		return "List";
+	}
+
+	function doctype_from_route_segment(segment) {
+		return (segment || "")
+			.toString()
+			.split("-")
+			.filter(Boolean)
+			.map(function (part) {
+				return part.charAt(0).toUpperCase() + part.slice(1);
+			})
+			.join(" ");
+	}
+
+	function internal_list_route_from_anchor(anchor) {
+		if (!anchor) return null;
+		try {
+			var href = anchor.getAttribute("href") || anchor.href;
+			if (!href) return null;
+			var url = new URL(href, window.location.origin);
+			if (url.origin !== window.location.origin) return null;
+			var match = url.pathname.match(/^\/(?:desk|app)\/([^/?#]+)\/view\/([^/?#]+)/);
+			if (!match || !match[1] || !match[2]) return null;
+			return {
+				doctype: doctype_from_route_segment(decodeURIComponent(match[1])),
+				view: match[2].charAt(0).toUpperCase() + match[2].slice(1),
+			};
+		} catch (e) {
+			return null;
+		}
 	}
 
 	function normalize(s) {
@@ -377,6 +406,26 @@
 				opts: opts,
 			};
 			frappe.set_route(["List", item.link_to, view]);
+			return;
+		}
+
+		var parsed = internal_list_route_from_anchor(anchor);
+		if (item.link_type === "URL" && parsed) {
+			opts = route_options_from_anchor(anchor, null);
+			e.preventDefault();
+			e.stopPropagation();
+			if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+			frappe.route_options = opts;
+			track_click(label, {
+				link_to: parsed.doctype,
+			});
+			window.__backdesk_sidebar_debug.lastUrlClick = {
+				label: label,
+				doctype: parsed.doctype,
+				view: parsed.view,
+				opts: opts,
+			};
+			frappe.set_route(["List", parsed.doctype, parsed.view]);
 			return;
 		}
 

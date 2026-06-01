@@ -82,6 +82,18 @@ def test_workspace_sidebar_js_ports_generic_navigation_fixes():
     assert "window.__backdesk_sidebar_debug" in js
 
 
+def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab():
+    js = read("backdesk/public/js/workspace_sidebar.js")
+    hooks = read("backdesk/hooks.py")
+
+    assert "internal_list_route_from_anchor" in js
+    assert "doctype_from_route_segment" in js
+    assert 'item.link_type === "URL"' in js
+    assert 'frappe.set_route(["List", parsed.doctype, parsed.view])' in js
+    assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
+    assert 'BACKDESK_ASSET_VERSION = "20260601-1"' in hooks
+
+
 def test_workspace_sidebar_js_stays_generic():
     js = read("backdesk/public/js/workspace_sidebar.js").lower()
 
