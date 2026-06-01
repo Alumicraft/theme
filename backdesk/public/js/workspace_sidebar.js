@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260601-5";
+	window.__backdesk_sidebar_debug.version = "20260601-6";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -900,6 +900,45 @@
 		args.filters = JSON.stringify(filters);
 	}
 
+	function force_payment_request_not_paid_params(params) {
+		if (!params || params.get("doctype") !== "Payment Request") return false;
+		var filters = normalize_reportview_filters(params.get("filters"));
+		if (!has_payment_request_not_paid_filter(filters)) {
+			filters.push(["Payment Request", "status", "!=", "Paid"]);
+		}
+		params.set("filters", JSON.stringify(filters));
+		return true;
+	}
+
+	function reportview_url(url) {
+		return /(?:^|\/)api\/method\/frappe\.desk\.reportview\.(?:get|get_count|get_list)(?:[?#]|$)/.test(
+			(url || "").toString()
+		);
+	}
+
+	function force_payment_request_not_paid_body(body) {
+		try {
+			if (!body) return body;
+			if (typeof URLSearchParams !== "undefined" && body instanceof URLSearchParams) {
+				force_payment_request_not_paid_params(body);
+				return body;
+			}
+			if (typeof FormData !== "undefined" && body instanceof FormData) {
+				var filters = normalize_reportview_filters(body.get("filters"));
+				if (body.get("doctype") === "Payment Request" && !has_payment_request_not_paid_filter(filters)) {
+					filters.push(["Payment Request", "status", "!=", "Paid"]);
+					body.set("filters", JSON.stringify(filters));
+				}
+				return body;
+			}
+			if (typeof body === "string") {
+				var params = new URLSearchParams(body);
+				if (force_payment_request_not_paid_params(params)) return params.toString();
+			}
+		} catch (e) {}
+		return body;
+	}
+
 	function patch_payment_request_reportview_call() {
 		if (!frappe || typeof frappe.call !== "function") return false;
 		if (frappe.call._backdesk_payment_request_filter_patched) return true;
@@ -927,6 +966,43 @@
 		if (n <= 0) return;
 		if (!patch_payment_request_reportview_call()) {
 			setTimeout(function () { try_patch_payment_request_reportview_call(n - 1); }, 300);
+		}
+	}
+
+	function patch_payment_request_reportview_transport() {
+		try {
+			if (window.XMLHttpRequest && !window.XMLHttpRequest.prototype._backdesk_payment_request_filter_patched) {
+				var original_open = window.XMLHttpRequest.prototype.open;
+				var original_send = window.XMLHttpRequest.prototype.send;
+				window.XMLHttpRequest.prototype.open = function (method, url) {
+					this._backdesk_reportview_url = reportview_url(url);
+					return original_open.apply(this, arguments);
+				};
+				window.XMLHttpRequest.prototype.send = function (body) {
+					if (this._backdesk_reportview_url) body = force_payment_request_not_paid_body(body);
+					return original_send.call(this, body);
+				};
+				window.XMLHttpRequest.prototype._backdesk_payment_request_filter_patched = true;
+			}
+
+			if (window.fetch && !window.fetch._backdesk_payment_request_filter_patched) {
+				var original_fetch = window.fetch;
+				window.fetch = function (input, init) {
+					try {
+						var url = typeof input === "string" ? input : input && input.url;
+						if (reportview_url(url) && init && init.body) {
+							init = Object.assign({}, init, {
+								body: force_payment_request_not_paid_body(init.body),
+							});
+						}
+					} catch (e) {}
+					return original_fetch.apply(this, arguments);
+				};
+				window.fetch._backdesk_payment_request_filter_patched = true;
+			}
+			return true;
+		} catch (e) {
+			return false;
 		}
 	}
 
@@ -979,6 +1055,7 @@
 
 		inject_workspace_fullbleed_styles();
 		set_workspace_fullbleed_class("init");
+		patch_payment_request_reportview_transport();
 		try_patch_payment_request_reportview_call(20);
 		try_patch_typelink_get_path(20);
 		try_patch_workspace_switch(20);
