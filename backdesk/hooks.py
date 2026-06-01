@@ -22,6 +22,10 @@ app_include_js = [
     versioned_asset("/assets/backdesk/js/workspace_sidebar.js"),
 ]
 
+doctype_list_js = {
+    "Payment Request": "public/js/payment_request_list.js",
+}
+
 boot_session = "backdesk.api.boot_session"
 
 override_whitelisted_methods = {

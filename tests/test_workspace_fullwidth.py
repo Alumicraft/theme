@@ -163,6 +163,15 @@ def test_install_makes_payment_request_status_filterable():
     assert 'frappe.clear_cache(doctype="Payment Request")' in install
 
 
+def test_payment_request_list_excludes_paid_by_default():
+    hooks = read("backdesk/hooks.py")
+    list_js = read("backdesk/public/js/payment_request_list.js")
+
+    assert '"Payment Request": "public/js/payment_request_list.js"' in hooks
+    assert 'frappe.listview_settings["Payment Request"]' in list_js
+    assert 'filters: [["status", "!=", "Paid"]]' in list_js
+
+
 def test_api_contains_boot_sidebar_cleanup_and_desktop_icon_override():
     api = read("backdesk/api.py")
 
