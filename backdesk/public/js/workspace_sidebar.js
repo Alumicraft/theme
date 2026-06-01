@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260601-4";
+	window.__backdesk_sidebar_debug.version = "20260601-5";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -842,6 +842,94 @@
 		observer.observe(el, { attributes: true, attributeFilter: ["data-title"] });
 	}
 
+	function normalize_reportview_filters(filters) {
+		if (!filters) return [];
+		if (typeof filters === "string") {
+			try {
+				filters = JSON.parse(filters);
+			} catch (e) {
+				filters = [];
+			}
+		}
+		if (Array.isArray(filters)) return filters.slice();
+		if (typeof filters !== "object") return [];
+
+		return Object.keys(filters).map(function (fieldname) {
+			var value = filters[fieldname];
+			if (
+				Array.isArray(value) &&
+				value.length &&
+				["=", ">", "<", ">=", "<=", "!=", "like", "not like", "in", "not in", "between", "is"].indexOf(
+					(value[0] || "").toString().toLowerCase()
+				) !== -1
+			) {
+				return [fieldname, value[0], value.length > 1 ? value[1] : null];
+			}
+			return [fieldname, "=", value];
+		});
+	}
+
+	function has_payment_request_not_paid_filter(filters) {
+		for (var i = 0; i < filters.length; i++) {
+			var condition = filters[i];
+			if (!Array.isArray(condition)) continue;
+			if (condition.length >= 4) {
+				if (
+					condition[0] === "Payment Request" &&
+					condition[1] === "status" &&
+					condition[2] === "!=" &&
+					condition[3] === "Paid"
+				) {
+					return true;
+				}
+			} else if (condition.length >= 3) {
+				if (condition[0] === "status" && condition[1] === "!=" && condition[2] === "Paid") {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	function force_payment_request_not_paid(args) {
+		if (!args || args.doctype !== "Payment Request") return;
+		var filters = normalize_reportview_filters(args.filters);
+		if (!has_payment_request_not_paid_filter(filters)) {
+			filters.push(["Payment Request", "status", "!=", "Paid"]);
+		}
+		args.filters = JSON.stringify(filters);
+	}
+
+	function patch_payment_request_reportview_call() {
+		if (!frappe || typeof frappe.call !== "function") return false;
+		if (frappe.call._backdesk_payment_request_filter_patched) return true;
+
+		var original_call = frappe.call;
+		var reportview_methods = {
+			"frappe.desk.reportview.get": true,
+			"frappe.desk.reportview.get_count": true,
+			"frappe.desk.reportview.get_list": true,
+		};
+
+		frappe.call = function (opts) {
+			try {
+				if (typeof opts === "object" && opts && reportview_methods[opts.method]) {
+					force_payment_request_not_paid(opts.args);
+				}
+			} catch (e) {}
+			return original_call.apply(this, arguments);
+		};
+		frappe.call._backdesk_payment_request_filter_patched = true;
+		return true;
+	}
+
+	function try_patch_payment_request_reportview_call(n) {
+		if (n <= 0) return;
+		if (!patch_payment_request_reportview_call()) {
+			setTimeout(function () { try_patch_payment_request_reportview_call(n - 1); }, 300);
+		}
+	}
+
 	function inject_workspace_fullbleed_styles() {
 		if (document.getElementById("backdesk-workspace-fullbleed-js")) return;
 		var style = document.createElement("style");
@@ -891,6 +979,7 @@
 
 		inject_workspace_fullbleed_styles();
 		set_workspace_fullbleed_class("init");
+		try_patch_payment_request_reportview_call(20);
 		try_patch_typelink_get_path(20);
 		try_patch_workspace_switch(20);
 		try_patch_workspace_save_page(20);

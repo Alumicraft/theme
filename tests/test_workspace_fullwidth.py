@@ -96,7 +96,7 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert 'item.link_type === "URL"' in js
     assert 'frappe.set_route(["List", parsed.doctype, parsed.view])' in js
     assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
-    assert 'BACKDESK_ASSET_VERSION = "20260601-4"' in hooks
+    assert 'BACKDESK_ASSET_VERSION = "20260601-5"' in hooks
 
 
 def test_workspace_sidebar_js_stays_generic():
@@ -198,6 +198,20 @@ def test_payment_request_reportview_override_excludes_paid():
     assert "return reportview.get()" in api
     assert "return reportview.get_count()" in api
     assert "return reportview.get_list()" in api
+
+
+def test_payment_request_reportview_calls_exclude_paid_client_side():
+    js = read("backdesk/public/js/workspace_sidebar.js")
+
+    assert 'window.__backdesk_sidebar_debug.version = "20260601-5"' in js
+    assert "patch_payment_request_reportview_call" in js
+    assert "force_payment_request_not_paid" in js
+    assert '"frappe.desk.reportview.get": true' in js
+    assert '"frappe.desk.reportview.get_count": true' in js
+    assert '"frappe.desk.reportview.get_list": true' in js
+    assert 'args.doctype !== "Payment Request"' in js
+    assert '["Payment Request", "status", "!=", "Paid"]' in js
+    assert "args.filters = JSON.stringify(filters)" in js
 
 
 def test_api_contains_boot_sidebar_cleanup_and_desktop_icon_override():
