@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260601-6";
+	window.__backdesk_sidebar_debug.version = "20260601-7";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -189,6 +189,14 @@
 			if (Object.keys(opts).length) return opts;
 		}
 		return route_options_from_anchor(anchor, item);
+	}
+
+	function sanitize_list_route_options(doctype, opts) {
+		if (doctype !== "Payment Request" || !opts) return opts;
+		var sanitized = Object.assign({}, opts);
+		delete sanitized.status;
+		delete sanitized["Payment Request.status"];
+		return sanitized;
 	}
 
 	function list_view_for_item(item, anchor) {
@@ -416,6 +424,7 @@
 			e.stopPropagation();
 			if (e.stopImmediatePropagation) e.stopImmediatePropagation();
 			var view = list_view_for_item(item, anchor);
+			opts = sanitize_list_route_options(item.link_to, opts);
 			frappe.route_options = opts;
 			track_click(label, item);
 			window.__backdesk_sidebar_debug.lastClick = {
@@ -439,6 +448,7 @@
 			e.preventDefault();
 			e.stopPropagation();
 			if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+			opts = sanitize_list_route_options(parsed.doctype, opts);
 			frappe.route_options = opts;
 			track_click(label, {
 				link_to: parsed.doctype,
