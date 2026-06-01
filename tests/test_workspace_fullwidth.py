@@ -150,6 +150,19 @@ def test_sidebar_icon_management_code_is_removed():
     assert not settings_path.exists()
 
 
+def test_install_makes_payment_request_status_filterable():
+    install = read("backdesk/install.py")
+
+    assert "make_payment_request_status_filterable()" in install
+    assert '"Payment Request-status-in_standard_filter"' in install
+    assert '"doc_type": "Payment Request"' in install
+    assert '"field_name": "status"' in install
+    assert '"property": "in_standard_filter"' in install
+    assert '"property_type": "Check"' in install
+    assert '"value": "1"' in install
+    assert 'frappe.clear_cache(doctype="Payment Request")' in install
+
+
 def test_api_contains_boot_sidebar_cleanup_and_desktop_icon_override():
     api = read("backdesk/api.py")
 
