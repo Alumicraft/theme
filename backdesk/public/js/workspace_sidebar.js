@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260601-1";
+	window.__backdesk_sidebar_debug.version = "20260601-2";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -154,7 +154,25 @@
 		return opts;
 	}
 
+	function route_options_from_url(raw_url) {
+		var opts = {};
+		if (!raw_url) return opts;
+		try {
+			var url = new URL(raw_url, window.location.origin);
+			if (!url.search) return opts;
+			var params = new URLSearchParams(url.search);
+			params.forEach(function (value, key) {
+				var entry = route_option_entry(value);
+				if (!key || entry[1] == null || entry[1] === "") return;
+				opts[key] = entry;
+			});
+		} catch (e) {}
+		return opts;
+	}
+
 	function route_options_from_item(item, anchor) {
+		var url_opts = route_options_from_url(item.url);
+		if (Object.keys(url_opts).length) return url_opts;
 		var opts = filters_to_route_options(parse_filters(item.filters));
 		if (Object.keys(opts).length) return opts;
 		if (item.route_options) {
