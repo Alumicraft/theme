@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260601-7";
+	window.__backdesk_sidebar_debug.version = "20260601-8";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -192,10 +192,18 @@
 	}
 
 	function sanitize_list_route_options(doctype, opts) {
-		if (doctype !== "Payment Request" || !opts) return opts;
+		if (!opts) return opts;
 		var sanitized = Object.assign({}, opts);
-		delete sanitized.status;
-		delete sanitized["Payment Request.status"];
+		if (doctype === "Payment Request") {
+			delete sanitized.status;
+			delete sanitized["Payment Request.status"];
+		}
+		if (doctype === "Project") {
+			var project_type = sanitized["Project.project_type"] || sanitized.project_type;
+			if (Array.isArray(project_type) && project_type[1] === "Build") {
+				sanitized["Project.status"] = ["not in", ["Completed", "Cancelled"]];
+			}
+		}
 		return sanitized;
 	}
 
@@ -901,6 +909,49 @@
 		return false;
 	}
 
+	function filter_field(condition) {
+		if (!Array.isArray(condition)) return null;
+		if (condition.length >= 4) return condition[1];
+		if (condition.length >= 3) return condition[0];
+		return null;
+	}
+
+	function filter_operator(condition) {
+		if (!Array.isArray(condition)) return null;
+		if (condition.length >= 4) return condition[2];
+		if (condition.length >= 3) return condition[1];
+		return null;
+	}
+
+	function filter_value(condition) {
+		if (!Array.isArray(condition)) return null;
+		if (condition.length >= 4) return condition[3];
+		if (condition.length >= 3) return condition[2];
+		return null;
+	}
+
+	function has_project_build_filter(filters) {
+		for (var i = 0; i < filters.length; i++) {
+			var condition = filters[i];
+			if (filter_field(condition) !== "project_type") continue;
+			var value = filter_value(condition);
+			if (value === "Build") return true;
+			if (Array.isArray(value) && value.indexOf("Build") !== -1) return true;
+		}
+		return false;
+	}
+
+	function has_project_build_status_exclusion(filters) {
+		for (var i = 0; i < filters.length; i++) {
+			var condition = filters[i];
+			if (filter_field(condition) !== "status") continue;
+			if ((filter_operator(condition) || "").toString().toLowerCase() !== "not in") continue;
+			var value = filter_value(condition);
+			return Array.isArray(value) && value.indexOf("Completed") !== -1 && value.indexOf("Cancelled") !== -1;
+		}
+		return false;
+	}
+
 	function force_payment_request_not_paid(args) {
 		if (!args || args.doctype !== "Payment Request") return;
 		var filters = normalize_reportview_filters(args.filters);
@@ -910,12 +961,31 @@
 		args.filters = JSON.stringify(filters);
 	}
 
+	function force_project_build_active(args) {
+		if (!args || args.doctype !== "Project") return;
+		var filters = normalize_reportview_filters(args.filters);
+		if (has_project_build_filter(filters) && !has_project_build_status_exclusion(filters)) {
+			filters.push(["Project", "status", "not in", ["Completed", "Cancelled"]]);
+			args.filters = JSON.stringify(filters);
+		}
+	}
+
 	function force_payment_request_not_paid_params(params) {
-		if (!params || params.get("doctype") !== "Payment Request") return false;
+		if (!params) return false;
+		if (params.get("doctype") !== "Payment Request") return false;
 		var filters = normalize_reportview_filters(params.get("filters"));
 		if (!has_payment_request_not_paid_filter(filters)) {
 			filters.push(["Payment Request", "status", "!=", "Paid"]);
 		}
+		params.set("filters", JSON.stringify(filters));
+		return true;
+	}
+
+	function force_project_build_active_params(params) {
+		if (!params || params.get("doctype") !== "Project") return false;
+		var filters = normalize_reportview_filters(params.get("filters"));
+		if (!has_project_build_filter(filters) || has_project_build_status_exclusion(filters)) return false;
+		filters.push(["Project", "status", "not in", ["Completed", "Cancelled"]]);
 		params.set("filters", JSON.stringify(filters));
 		return true;
 	}
@@ -931,6 +1001,7 @@
 			if (!body) return body;
 			if (typeof URLSearchParams !== "undefined" && body instanceof URLSearchParams) {
 				force_payment_request_not_paid_params(body);
+				force_project_build_active_params(body);
 				return body;
 			}
 			if (typeof FormData !== "undefined" && body instanceof FormData) {
@@ -939,11 +1010,20 @@
 					filters.push(["Payment Request", "status", "!=", "Paid"]);
 					body.set("filters", JSON.stringify(filters));
 				}
+				if (body.get("doctype") === "Project") {
+					var project_filters = normalize_reportview_filters(body.get("filters"));
+					if (has_project_build_filter(project_filters) && !has_project_build_status_exclusion(project_filters)) {
+						project_filters.push(["Project", "status", "not in", ["Completed", "Cancelled"]]);
+						body.set("filters", JSON.stringify(project_filters));
+					}
+				}
 				return body;
 			}
 			if (typeof body === "string") {
 				var params = new URLSearchParams(body);
-				if (force_payment_request_not_paid_params(params)) return params.toString();
+				var changed = force_payment_request_not_paid_params(params);
+				changed = force_project_build_active_params(params) || changed;
+				if (changed) return params.toString();
 			}
 		} catch (e) {}
 		return body;
@@ -964,6 +1044,7 @@
 			try {
 				if (typeof opts === "object" && opts && reportview_methods[opts.method]) {
 					force_payment_request_not_paid(opts.args);
+					force_project_build_active(opts.args);
 				}
 			} catch (e) {}
 			return original_call.apply(this, arguments);
