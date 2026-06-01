@@ -111,3 +111,8 @@ def get_layout_with_icons():
                 item["icon_image"] = img.icon_image
 
     return layout
+
+
+def payment_request_query_conditions(user=None):
+    """Exclude paid Payment Requests from list/query views."""
+    return "coalesce(`tabPayment Request`.`status`, '') != 'Paid'"

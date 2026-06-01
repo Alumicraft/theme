@@ -35,6 +35,10 @@ override_whitelisted_methods = {
     "frappe.desk.doctype.workspace.workspace.save_page": "backdesk.api.save_workspace_page",
 }
 
+permission_query_conditions = {
+    "Payment Request": "backdesk.api.payment_request_query_conditions",
+}
+
 # Install
 # -------
 

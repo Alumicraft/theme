@@ -172,6 +172,16 @@ def test_payment_request_list_excludes_paid_by_default():
     assert 'filters: [["status", "!=", "Paid"]]' in list_js
 
 
+def test_payment_request_query_condition_excludes_paid():
+    hooks = read("backdesk/hooks.py")
+    api = read("backdesk/api.py")
+
+    assert '"Payment Request": "backdesk.api.payment_request_query_conditions"' in hooks
+    assert "def payment_request_query_conditions(user=None):" in api
+    assert "`tabPayment Request`.`status`" in api
+    assert "!= 'Paid'" in api
+
+
 def test_api_contains_boot_sidebar_cleanup_and_desktop_icon_override():
     api = read("backdesk/api.py")
 
