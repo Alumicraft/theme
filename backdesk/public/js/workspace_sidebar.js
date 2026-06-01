@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260601-2";
+	window.__backdesk_sidebar_debug.version = "20260601-3";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -154,7 +154,7 @@
 		return opts;
 	}
 
-	function route_options_from_url(raw_url) {
+	function route_options_from_url(raw_url, item) {
 		var opts = {};
 		if (!raw_url) return opts;
 		try {
@@ -162,16 +162,17 @@
 			if (!url.search) return opts;
 			var params = new URLSearchParams(url.search);
 			params.forEach(function (value, key) {
+				var normalized_key = route_option_key(key, item);
 				var entry = route_option_entry(value);
-				if (!key || entry[1] == null || entry[1] === "") return;
-				opts[key] = entry;
+				if (!normalized_key || entry[1] == null || entry[1] === "") return;
+				opts[normalized_key] = entry;
 			});
 		} catch (e) {}
 		return opts;
 	}
 
 	function route_options_from_item(item, anchor) {
-		var url_opts = route_options_from_url(item.url);
+		var url_opts = route_options_from_url(item.url, item);
 		if (Object.keys(url_opts).length) return url_opts;
 		var opts = filters_to_route_options(parse_filters(item.filters));
 		if (Object.keys(opts).length) return opts;
