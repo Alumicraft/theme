@@ -91,10 +91,12 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert "route_options_from_url(item.url, item)" in js
     assert "route_option_key(key, item)" in js
     assert "if (Object.keys(url_opts).length) return url_opts" in js
+    assert "Object.assign({}, item" in js
+    assert "link_to: parsed.doctype" in js
     assert 'item.link_type === "URL"' in js
     assert 'frappe.set_route(["List", parsed.doctype, parsed.view])' in js
     assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
-    assert 'BACKDESK_ASSET_VERSION = "20260601-3"' in hooks
+    assert 'BACKDESK_ASSET_VERSION = "20260601-4"' in hooks
 
 
 def test_workspace_sidebar_js_stays_generic():

@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260601-3";
+	window.__backdesk_sidebar_debug.version = "20260601-4";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -430,7 +430,12 @@
 
 		var parsed = internal_list_route_from_anchor(anchor);
 		if (item.link_type === "URL" && parsed) {
-			opts = route_options_from_anchor(anchor, null);
+			opts = route_options_from_item(
+				Object.assign({}, item, {
+					link_to: parsed.doctype,
+				}),
+				anchor
+			);
 			e.preventDefault();
 			e.stopPropagation();
 			if (e.stopImmediatePropagation) e.stopImmediatePropagation();
