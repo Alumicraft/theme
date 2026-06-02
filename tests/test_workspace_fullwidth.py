@@ -96,7 +96,7 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert 'item.link_type === "URL"' in js
     assert 'frappe.set_route(["List", parsed.doctype, parsed.view])' in js
     assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
-    assert 'BACKDESK_ASSET_VERSION = "20260602-2"' in hooks
+    assert 'BACKDESK_ASSET_VERSION = "20260602-3"' in hooks
     assert "sanitize_list_route_options" in js
     assert "normalize_sidebar_anchor_hrefs" in js
     assert "clean_sidebar_href_for_item" in js
@@ -112,6 +112,9 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert "list_filter_rule_for_context" in js
     assert "clean_url_for_rule" in js
     assert "rule_matches_context" in js
+    assert "apply_default_filters_for_rule" in js
+    assert "default_filters" in js
+    assert "force_filters" not in js
     assert "delete sanitized[rule.strip_route_keys[i]]" in js
     assert '"docstatus"' in js
     assert '"Payment Request.docstatus"' in js
@@ -195,55 +198,48 @@ def test_payment_request_list_filter_is_not_registered_as_doctype_js():
     assert 'filters: [["status", "not in", ["Paid", "Cancelled"]]]' in list_js
 
 
-def test_payment_request_query_condition_excludes_paid_and_cancelled():
+def test_payment_request_query_condition_is_not_hard_enforced():
     hooks = read("backdesk/hooks.py")
     api = read("backdesk/api.py")
 
-    assert '"Payment Request": "backdesk.api.payment_request_query_conditions"' in hooks
-    assert "def payment_request_query_conditions(user=None):" in api
-    assert "`tabPayment Request`.`status`" in api
-    assert "not in ('Paid', 'Cancelled')" in api
+    assert "permission_query_conditions" not in hooks
+    assert "payment_request_query_conditions" not in api
+    assert "`tabPayment Request`.`status`" not in api
 
 
-def test_payment_request_reportview_override_excludes_paid_and_cancelled():
+def test_payment_request_reportview_override_is_not_hard_enforced():
     hooks = read("backdesk/hooks.py")
     api = read("backdesk/api.py")
 
-    assert '"frappe.desk.reportview.get": "backdesk.api.reportview_get"' in hooks
-    assert '"frappe.desk.reportview.get_count": "backdesk.api.reportview_get_count"' in hooks
-    assert '"frappe.desk.reportview.get_list": "backdesk.api.reportview_get_list"' in hooks
-    assert "def _append_payment_request_active_filter():" in api
-    assert 'form_dict.get("doctype") != "Payment Request"' in api
-    assert '["Payment Request", "status", "not in", ["Paid", "Cancelled"]]' in api
-    assert "def reportview_get():" in api
-    assert "def reportview_get_count():" in api
-    assert "def reportview_get_list():" in api
-    assert "return reportview.get()" in api
-    assert "return reportview.get_count()" in api
-    assert "return reportview.get_list()" in api
+    compact_hooks = " ".join(hooks.split())
+    assert '"frappe.desk.reportview.get": "backdesk.api.reportview_get"' not in compact_hooks
+    assert '"frappe.desk.reportview.get_count": "backdesk.api.reportview_get_count"' not in compact_hooks
+    assert '"frappe.desk.reportview.get_list": "backdesk.api.reportview_get_list"' not in compact_hooks
+    assert "_append_payment_request_active_filter" not in api
+    assert "def reportview_get():" not in api
+    assert "def reportview_get_count():" not in api
+    assert "def reportview_get_list():" not in api
 
 
-def test_payment_request_reportview_calls_exclude_paid_client_side():
+def test_workspace_sidebar_applies_removable_default_filters_client_side():
     js = read("backdesk/public/js/workspace_sidebar.js")
 
-    assert 'window.__backdesk_sidebar_debug.version = "20260602-2"' in js
-    assert "patch_payment_request_reportview_call" in js
-    assert "patch_payment_request_reportview_transport" in js
-    assert "apply_list_filter_rules_to_args" in js
-    assert "apply_list_filter_rules_to_params" in js
-    assert "apply_list_filter_rules_to_body" in js
+    assert 'window.__backdesk_sidebar_debug.version = "20260602-3"' in js
+    assert "default_filters" in js
+    assert "apply_default_filters_for_rule" in js
+    assert "route_options_with_default_filters" in js
+    assert "patch_payment_request_reportview_call" not in js
+    assert "patch_payment_request_reportview_transport" not in js
+    assert "apply_list_filter_rules_to_args" not in js
+    assert "apply_list_filter_rules_to_params" not in js
+    assert "apply_list_filter_rules_to_body" not in js
     assert "force_payment_request_not_paid" not in js
     assert "force_project_build_active" not in js
-    assert '"frappe.desk.reportview.get": true' in js
-    assert '"frappe.desk.reportview.get_count": true' in js
-    assert '"frappe.desk.reportview.get_list": true' in js
     assert '["Payment Request", "status", "not in", ["Paid", "Cancelled"]]' in js
     assert '["Project", "status", "in", ["Open", "In Progress"]]' in js
     assert '["Project", "project_type", "in", ["Service/Parts", "Consignment"]]' in js
-    assert "args.filters = JSON.stringify(filters)" in js
-    assert "window.XMLHttpRequest.prototype.send" in js
-    assert "window.fetch" in js
-    assert "frappe\\.desk\\.reportview\\.(?:get|get_count|get_list)" in js
+    assert "defaults[route_option.key] = route_option.entry" in js
+    assert "frappe.route_options = opts" in js
 
 
 def test_api_contains_boot_sidebar_cleanup_and_desktop_icon_override():

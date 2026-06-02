@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260602-2";
+	window.__backdesk_sidebar_debug.version = "20260602-3";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -27,7 +27,7 @@
 				project_type: ["=", "Build"],
 			},
 			strip_route_keys: [],
-			force_filters: [
+			default_filters: [
 				["Project", "status", "in", ["Open", "In Progress"]],
 			],
 		},
@@ -42,7 +42,7 @@
 				project_type: ["=", "Service/Parts"],
 			},
 			strip_route_keys: [],
-			force_filters: [
+			default_filters: [
 				["Project", "project_type", "in", ["Service/Parts", "Consignment"]],
 				["Project", "status", "in", ["Open", "In Progress"]],
 			],
@@ -61,7 +61,7 @@
 				"status",
 				"Payment Request.status",
 			],
-			force_filters: [
+			default_filters: [
 				["Payment Request", "status", "not in", ["Paid", "Cancelled"]],
 			],
 		},
@@ -315,6 +315,36 @@
 			}
 		}
 		return sanitized;
+	}
+
+	function route_option_from_filter(filter) {
+		var parts = filter_parts(filter);
+		if (!parts || !parts.field) return null;
+		return {
+			key: parts.doctype ? parts.doctype + "." + parts.field : parts.field,
+			entry: [parts.operator, parts.value],
+		};
+	}
+
+	function apply_default_filters_for_rule(opts, rule) {
+		var defaults = Object.assign({}, opts || {});
+		if (!rule || !rule.default_filters) return defaults;
+		for (var i = 0; i < rule.default_filters.length; i++) {
+			var route_option = route_option_from_filter(rule.default_filters[i]);
+			if (!route_option) continue;
+			defaults[route_option.key] = route_option.entry;
+		}
+		return defaults;
+	}
+
+	function route_options_with_default_filters(doctype, opts, context) {
+		var route_options = Object.assign({}, opts || {});
+		var rule = list_filter_rule_for_context({
+			doctype: doctype,
+			label: context && context.label ? context.label : "",
+			route_options: route_options,
+		});
+		return apply_default_filters_for_rule(route_options, rule);
 	}
 
 	function list_view_for_item(item, anchor) {
@@ -574,6 +604,7 @@
 			if (e.stopImmediatePropagation) e.stopImmediatePropagation();
 			var view = list_view_for_item(item, anchor);
 			opts = sanitize_list_route_options(item.link_to, opts, { label: label });
+			opts = route_options_with_default_filters(item.link_to, opts, { label: label });
 			frappe.route_options = opts;
 			track_click(label, item);
 			window.__backdesk_sidebar_debug.lastClick = {
@@ -598,6 +629,7 @@
 			e.stopPropagation();
 			if (e.stopImmediatePropagation) e.stopImmediatePropagation();
 			opts = sanitize_list_route_options(parsed.doctype, opts, { label: label });
+			opts = route_options_with_default_filters(parsed.doctype, opts, { label: label });
 			frappe.route_options = opts;
 			track_click(label, {
 				link_to: parsed.doctype,
@@ -1001,214 +1033,6 @@
 		observer.observe(el, { attributes: true, attributeFilter: ["data-title"] });
 	}
 
-	function normalize_reportview_filters(filters) {
-		if (!filters) return [];
-		if (typeof filters === "string") {
-			try {
-				filters = JSON.parse(filters);
-			} catch (e) {
-				filters = [];
-			}
-		}
-		if (Array.isArray(filters)) return filters.slice();
-		if (typeof filters !== "object") return [];
-
-		return Object.keys(filters).map(function (fieldname) {
-			var value = filters[fieldname];
-			if (
-				Array.isArray(value) &&
-				value.length &&
-				["=", ">", "<", ">=", "<=", "!=", "like", "not like", "in", "not in", "between", "is"].indexOf(
-					(value[0] || "").toString().toLowerCase()
-				) !== -1
-			) {
-				return [fieldname, value[0], value.length > 1 ? value[1] : null];
-			}
-			return [fieldname, "=", value];
-		});
-	}
-
-	function filter_equals_expected(filter, expected) {
-		var actual = filter_parts(filter);
-		var wanted = filter_parts(expected);
-		if (!actual || !wanted) return false;
-		if (wanted.doctype && actual.doctype && actual.doctype !== wanted.doctype) return false;
-		return (
-			actual.field === wanted.field &&
-			normalize_operator(actual.operator) === normalize_operator(wanted.operator) &&
-			values_equal(actual.value, wanted.value)
-		);
-	}
-
-	function filters_contain_expected(filters, expected) {
-		for (var i = 0; i < filters.length; i++) {
-			if (filter_equals_expected(filters[i], expected)) return true;
-		}
-		return false;
-	}
-
-	function filters_match_route_option(filters, key, expected) {
-		var field = route_option_field(key);
-		var entry = route_option_entry(expected);
-		for (var i = 0; i < filters.length; i++) {
-			var actual = filter_parts(filters[i]);
-			if (!actual || actual.field !== field) continue;
-			if (normalize_operator(actual.operator) !== normalize_operator(entry[0])) continue;
-			if (values_equal(actual.value, entry[1])) return true;
-		}
-		return false;
-	}
-
-	function rule_matches_reportview_filters(rule, filters) {
-		var required = rule.match_route_options || {};
-		var expected_keys = Object.keys(required);
-		var checked_fields = {};
-		for (var i = 0; i < expected_keys.length; i++) {
-			var key = expected_keys[i];
-			var field = route_option_field(key);
-			if (checked_fields[field]) continue;
-			checked_fields[field] = true;
-			var matched = false;
-			for (var j = 0; j < expected_keys.length; j++) {
-				var candidate = expected_keys[j];
-				if (route_option_field(candidate) !== field) continue;
-				if (filters_match_route_option(filters, candidate, required[candidate])) {
-					matched = true;
-					break;
-				}
-			}
-			if (!matched) return false;
-		}
-		return true;
-	}
-
-	function apply_list_filter_rules_to_args(args) {
-		if (!args || !args.doctype) return false;
-		var filters = normalize_reportview_filters(args.filters);
-		var matched = false;
-		for (var i = 0; i < LIST_ROUTE_FILTER_RULES.length; i++) {
-			var rule = LIST_ROUTE_FILTER_RULES[i];
-			if (rule.doctype !== args.doctype) continue;
-			if (!rule_matches_reportview_filters(rule, filters)) continue;
-			matched = true;
-			for (var j = 0; j < rule.force_filters.length; j++) {
-				if (!filters_contain_expected(filters, rule.force_filters[j])) {
-					filters.push(rule.force_filters[j]);
-				}
-			}
-		}
-		if (!matched) return false;
-		args.filters = JSON.stringify(filters);
-		return true;
-	}
-
-	function apply_list_filter_rules_to_params(params) {
-		if (!params) return false;
-		var args = {
-			doctype: params.get("doctype"),
-			filters: params.get("filters"),
-		};
-		var changed = apply_list_filter_rules_to_args(args);
-		if (changed) params.set("filters", args.filters);
-		return changed;
-	}
-
-	function reportview_url(url) {
-		return /(?:^|\/)api\/method\/frappe\.desk\.reportview\.(?:get|get_count|get_list)(?:[?#]|$)/.test(
-			(url || "").toString()
-		);
-	}
-
-	function apply_list_filter_rules_to_body(body) {
-		try {
-			if (!body) return body;
-			if (typeof URLSearchParams !== "undefined" && body instanceof URLSearchParams) {
-				apply_list_filter_rules_to_params(body);
-				return body;
-			}
-			if (typeof FormData !== "undefined" && body instanceof FormData) {
-				var args = {
-					doctype: body.get("doctype"),
-					filters: body.get("filters"),
-				};
-				if (apply_list_filter_rules_to_args(args)) body.set("filters", args.filters);
-				return body;
-			}
-			if (typeof body === "string") {
-				var params = new URLSearchParams(body);
-				if (apply_list_filter_rules_to_params(params)) return params.toString();
-			}
-		} catch (e) {}
-		return body;
-	}
-
-	function patch_payment_request_reportview_call() {
-		if (!frappe || typeof frappe.call !== "function") return false;
-		if (frappe.call._backdesk_payment_request_filter_patched) return true;
-
-		var original_call = frappe.call;
-		var reportview_methods = {
-			"frappe.desk.reportview.get": true,
-			"frappe.desk.reportview.get_count": true,
-			"frappe.desk.reportview.get_list": true,
-		};
-
-		frappe.call = function (opts) {
-			try {
-				if (typeof opts === "object" && opts && reportview_methods[opts.method]) {
-					apply_list_filter_rules_to_args(opts.args);
-				}
-			} catch (e) {}
-			return original_call.apply(this, arguments);
-		};
-		frappe.call._backdesk_payment_request_filter_patched = true;
-		return true;
-	}
-
-	function try_patch_payment_request_reportview_call(n) {
-		if (n <= 0) return;
-		if (!patch_payment_request_reportview_call()) {
-			setTimeout(function () { try_patch_payment_request_reportview_call(n - 1); }, 300);
-		}
-	}
-
-	function patch_payment_request_reportview_transport() {
-		try {
-			if (window.XMLHttpRequest && !window.XMLHttpRequest.prototype._backdesk_payment_request_filter_patched) {
-				var original_open = window.XMLHttpRequest.prototype.open;
-				var original_send = window.XMLHttpRequest.prototype.send;
-				window.XMLHttpRequest.prototype.open = function (method, url) {
-					this._backdesk_reportview_url = reportview_url(url);
-					return original_open.apply(this, arguments);
-				};
-				window.XMLHttpRequest.prototype.send = function (body) {
-					if (this._backdesk_reportview_url) body = apply_list_filter_rules_to_body(body);
-					return original_send.call(this, body);
-				};
-				window.XMLHttpRequest.prototype._backdesk_payment_request_filter_patched = true;
-			}
-
-			if (window.fetch && !window.fetch._backdesk_payment_request_filter_patched) {
-				var original_fetch = window.fetch;
-				window.fetch = function (input, init) {
-					try {
-						var url = typeof input === "string" ? input : input && input.url;
-						if (reportview_url(url) && init && init.body) {
-							init = Object.assign({}, init, {
-								body: apply_list_filter_rules_to_body(init.body),
-							});
-						}
-					} catch (e) {}
-					return original_fetch.apply(this, arguments);
-				};
-				window.fetch._backdesk_payment_request_filter_patched = true;
-			}
-			return true;
-		} catch (e) {
-			return false;
-		}
-	}
-
 	function inject_workspace_fullbleed_styles() {
 		if (document.getElementById("backdesk-workspace-fullbleed-js")) return;
 		var style = document.createElement("style");
@@ -1258,8 +1082,6 @@
 
 		inject_workspace_fullbleed_styles();
 		set_workspace_fullbleed_class("init");
-		patch_payment_request_reportview_transport();
-		try_patch_payment_request_reportview_call(20);
 		try_patch_typelink_get_path(20);
 		try_patch_workspace_switch(20);
 		try_patch_workspace_save_page(20);
