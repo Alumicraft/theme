@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260602-3";
+	window.__backdesk_sidebar_debug.version = "20260602-4";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -28,7 +28,7 @@
 			},
 			strip_route_keys: [],
 			default_filters: [
-				["Project", "status", "in", ["Open", "In Progress"]],
+				["Project", "status", "in", ["Open", "In progress"]],
 			],
 		},
 		{
@@ -44,7 +44,7 @@
 			strip_route_keys: [],
 			default_filters: [
 				["Project", "project_type", "in", ["Service/Parts", "Consignment"]],
-				["Project", "status", "in", ["Open", "In Progress"]],
+				["Project", "status", "in", ["Open", "In progress"]],
 			],
 		},
 		{

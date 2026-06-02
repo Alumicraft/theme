@@ -96,7 +96,7 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert 'item.link_type === "URL"' in js
     assert 'frappe.set_route(["List", parsed.doctype, parsed.view])' in js
     assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
-    assert 'BACKDESK_ASSET_VERSION = "20260602-3"' in hooks
+    assert 'BACKDESK_ASSET_VERSION = "20260602-4"' in hooks
     assert "sanitize_list_route_options" in js
     assert "normalize_sidebar_anchor_hrefs" in js
     assert "clean_sidebar_href_for_item" in js
@@ -224,7 +224,7 @@ def test_payment_request_reportview_override_is_not_hard_enforced():
 def test_workspace_sidebar_applies_removable_default_filters_client_side():
     js = read("backdesk/public/js/workspace_sidebar.js")
 
-    assert 'window.__backdesk_sidebar_debug.version = "20260602-3"' in js
+    assert 'window.__backdesk_sidebar_debug.version = "20260602-4"' in js
     assert "default_filters" in js
     assert "apply_default_filters_for_rule" in js
     assert "route_options_with_default_filters" in js
@@ -236,7 +236,7 @@ def test_workspace_sidebar_applies_removable_default_filters_client_side():
     assert "force_payment_request_not_paid" not in js
     assert "force_project_build_active" not in js
     assert '["Payment Request", "status", "not in", ["Paid", "Cancelled"]]' in js
-    assert '["Project", "status", "in", ["Open", "In Progress"]]' in js
+    assert '["Project", "status", "in", ["Open", "In progress"]]' in js
     assert '["Project", "project_type", "in", ["Service/Parts", "Consignment"]]' in js
     assert "defaults[route_option.key] = route_option.entry" in js
     assert "frappe.route_options = opts" in js
