@@ -96,16 +96,19 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert 'item.link_type === "URL"' in js
     assert 'frappe.set_route(["List", parsed.doctype, parsed.view])' in js
     assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
-    assert 'BACKDESK_ASSET_VERSION = "20260602-1"' in hooks
+    assert 'BACKDESK_ASSET_VERSION = "20260602-2"' in hooks
     assert "sanitize_list_route_options" in js
     assert "normalize_sidebar_anchor_hrefs" in js
     assert "clean_sidebar_href_for_item" in js
     assert "LIST_ROUTE_FILTER_RULES" in js
     assert 'id: "project-builds-active"' in js
+    assert 'id: "service-parts-active"' in js
     assert 'id: "payment-requests-unpaid"' in js
     assert 'clean_path: "/desk/project/view/list"' in js
     assert 'clean_path: "/desk/payment-request/view/list"' in js
     assert 'clean_query: { project_type: "Build" }' in js
+    assert 'clean_query: { project_type: "Service/Parts" }' in js
+    assert 'label: "Service/Parts"' in js
     assert "list_filter_rule_for_context" in js
     assert "clean_url_for_rule" in js
     assert "rule_matches_context" in js
@@ -189,29 +192,29 @@ def test_payment_request_list_filter_is_not_registered_as_doctype_js():
     assert "doctype_list_js" not in hooks
     assert '"Payment Request": "public/js/payment_request_list.js"' not in hooks
     assert 'frappe.listview_settings["Payment Request"]' in list_js
-    assert 'filters: [["status", "!=", "Paid"]]' in list_js
+    assert 'filters: [["status", "not in", ["Paid", "Cancelled"]]]' in list_js
 
 
-def test_payment_request_query_condition_excludes_paid():
+def test_payment_request_query_condition_excludes_paid_and_cancelled():
     hooks = read("backdesk/hooks.py")
     api = read("backdesk/api.py")
 
     assert '"Payment Request": "backdesk.api.payment_request_query_conditions"' in hooks
     assert "def payment_request_query_conditions(user=None):" in api
     assert "`tabPayment Request`.`status`" in api
-    assert "!= 'Paid'" in api
+    assert "not in ('Paid', 'Cancelled')" in api
 
 
-def test_payment_request_reportview_override_excludes_paid():
+def test_payment_request_reportview_override_excludes_paid_and_cancelled():
     hooks = read("backdesk/hooks.py")
     api = read("backdesk/api.py")
 
     assert '"frappe.desk.reportview.get": "backdesk.api.reportview_get"' in hooks
     assert '"frappe.desk.reportview.get_count": "backdesk.api.reportview_get_count"' in hooks
     assert '"frappe.desk.reportview.get_list": "backdesk.api.reportview_get_list"' in hooks
-    assert "def _append_payment_request_not_paid_filter():" in api
+    assert "def _append_payment_request_active_filter():" in api
     assert 'form_dict.get("doctype") != "Payment Request"' in api
-    assert '["Payment Request", "status", "!=", "Paid"]' in api
+    assert '["Payment Request", "status", "not in", ["Paid", "Cancelled"]]' in api
     assert "def reportview_get():" in api
     assert "def reportview_get_count():" in api
     assert "def reportview_get_list():" in api
@@ -223,7 +226,7 @@ def test_payment_request_reportview_override_excludes_paid():
 def test_payment_request_reportview_calls_exclude_paid_client_side():
     js = read("backdesk/public/js/workspace_sidebar.js")
 
-    assert 'window.__backdesk_sidebar_debug.version = "20260602-1"' in js
+    assert 'window.__backdesk_sidebar_debug.version = "20260602-2"' in js
     assert "patch_payment_request_reportview_call" in js
     assert "patch_payment_request_reportview_transport" in js
     assert "apply_list_filter_rules_to_args" in js
@@ -234,8 +237,9 @@ def test_payment_request_reportview_calls_exclude_paid_client_side():
     assert '"frappe.desk.reportview.get": true' in js
     assert '"frappe.desk.reportview.get_count": true' in js
     assert '"frappe.desk.reportview.get_list": true' in js
-    assert '["Payment Request", "status", "!=", "Paid"]' in js
-    assert '["Project", "status", "not in", ["Completed", "Cancelled"]]' in js
+    assert '["Payment Request", "status", "not in", ["Paid", "Cancelled"]]' in js
+    assert '["Project", "status", "in", ["Open", "In Progress"]]' in js
+    assert '["Project", "project_type", "in", ["Service/Parts", "Consignment"]]' in js
     assert "args.filters = JSON.stringify(filters)" in js
     assert "window.XMLHttpRequest.prototype.send" in js
     assert "window.fetch" in js

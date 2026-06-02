@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260602-1";
+	window.__backdesk_sidebar_debug.version = "20260602-2";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -28,7 +28,23 @@
 			},
 			strip_route_keys: [],
 			force_filters: [
-				["Project", "status", "not in", ["Completed", "Cancelled"]],
+				["Project", "status", "in", ["Open", "In Progress"]],
+			],
+		},
+		{
+			id: "service-parts-active",
+			doctype: "Project",
+			label: "Service/Parts",
+			clean_path: "/desk/project/view/list",
+			clean_query: { project_type: "Service/Parts" },
+			match_route_options: {
+				"Project.project_type": ["=", "Service/Parts"],
+				project_type: ["=", "Service/Parts"],
+			},
+			strip_route_keys: [],
+			force_filters: [
+				["Project", "project_type", "in", ["Service/Parts", "Consignment"]],
+				["Project", "status", "in", ["Open", "In Progress"]],
 			],
 		},
 		{
@@ -46,7 +62,7 @@
 				"Payment Request.status",
 			],
 			force_filters: [
-				["Payment Request", "status", "!=", "Paid"],
+				["Payment Request", "status", "not in", ["Paid", "Cancelled"]],
 			],
 		},
 	];

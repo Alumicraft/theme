@@ -113,18 +113,42 @@ def get_layout_with_icons():
     return layout
 
 
-def _payment_request_filter_exists(filters):
+PAYMENT_REQUEST_EXCLUDED_STATUSES = ["Paid", "Cancelled"]
+
+
+def _payment_request_active_filter_exists(filters):
     if isinstance(filters, dict):
-        return any((key or "").split(".")[-1].strip("`") == "status" for key in filters)
+        for key, value in filters.items():
+            if (key or "").split(".")[-1].strip("`") != "status":
+                continue
+            if (
+                isinstance(value, (list, tuple))
+                and len(value) >= 2
+                and str(value[0]).lower() == "not in"
+                and set(value[1] or []) >= set(PAYMENT_REQUEST_EXCLUDED_STATUSES)
+            ):
+                return True
+        return False
     if not isinstance(filters, list):
         return False
 
     for condition in filters:
         if not isinstance(condition, (list, tuple)):
             continue
-        if len(condition) >= 4 and condition[0] == "Payment Request" and condition[1] == "status":
+        if (
+            len(condition) >= 4
+            and condition[0] == "Payment Request"
+            and condition[1] == "status"
+            and str(condition[2]).lower() == "not in"
+            and set(condition[3] or []) >= set(PAYMENT_REQUEST_EXCLUDED_STATUSES)
+        ):
             return True
-        if len(condition) == 3 and condition[0] == "status":
+        if (
+            len(condition) == 3
+            and condition[0] == "status"
+            and str(condition[1]).lower() == "not in"
+            and set(condition[2] or []) >= set(PAYMENT_REQUEST_EXCLUDED_STATUSES)
+        ):
             return True
     return False
 
@@ -149,8 +173,8 @@ def _normalize_reportview_filters(filters):
     return normalized
 
 
-def _append_payment_request_not_paid_filter():
-    """Force Payment Request list/reportview queries to exclude paid rows."""
+def _append_payment_request_active_filter():
+    """Force Payment Request list/reportview queries to exclude paid and cancelled rows."""
     import json
 
     form_dict = frappe.local.form_dict
@@ -165,8 +189,8 @@ def _append_payment_request_not_paid_filter():
 
     filters = _normalize_reportview_filters(filters)
 
-    if not _payment_request_filter_exists(filters):
-        filters.append(["Payment Request", "status", "!=", "Paid"])
+    if not _payment_request_active_filter_exists(filters):
+        filters.append(["Payment Request", "status", "not in", ["Paid", "Cancelled"]])
 
     form_dict["filters"] = json.dumps(filters)
 
@@ -176,7 +200,7 @@ def _append_payment_request_not_paid_filter():
 def reportview_get():
     from frappe.desk import reportview
 
-    _append_payment_request_not_paid_filter()
+    _append_payment_request_active_filter()
     return reportview.get()
 
 
@@ -185,7 +209,7 @@ def reportview_get():
 def reportview_get_list():
     from frappe.desk import reportview
 
-    _append_payment_request_not_paid_filter()
+    _append_payment_request_active_filter()
     return reportview.get_list()
 
 
@@ -194,10 +218,10 @@ def reportview_get_list():
 def reportview_get_count():
     from frappe.desk import reportview
 
-    _append_payment_request_not_paid_filter()
+    _append_payment_request_active_filter()
     return reportview.get_count()
 
 
 def payment_request_query_conditions(user=None):
-    """Exclude paid Payment Requests from list/query views."""
-    return "coalesce(`tabPayment Request`.`status`, '') != 'Paid'"
+    """Exclude paid and cancelled Payment Requests from list/query views."""
+    return "coalesce(`tabPayment Request`.`status`, '') not in ('Paid', 'Cancelled')"
