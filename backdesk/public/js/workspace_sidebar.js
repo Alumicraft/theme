@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260601-9";
+	window.__backdesk_sidebar_debug.version = "20260601-10";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -195,6 +195,10 @@
 		if (!opts) return opts;
 		var sanitized = Object.assign({}, opts);
 		if (doctype === "Payment Request") {
+			delete sanitized.docstatus;
+			delete sanitized["Payment Request.docstatus"];
+			delete sanitized.stripe_payment_status;
+			delete sanitized["Payment Request.stripe_payment_status"];
 			delete sanitized.status;
 			delete sanitized["Payment Request.status"];
 		}

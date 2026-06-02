@@ -96,8 +96,12 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert 'item.link_type === "URL"' in js
     assert 'frappe.set_route(["List", parsed.doctype, parsed.view])' in js
     assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
-    assert 'BACKDESK_ASSET_VERSION = "20260601-9"' in hooks
+    assert 'BACKDESK_ASSET_VERSION = "20260601-10"' in hooks
     assert "sanitize_list_route_options" in js
+    assert "delete sanitized.docstatus" in js
+    assert 'delete sanitized["Payment Request.docstatus"]' in js
+    assert "delete sanitized.stripe_payment_status" in js
+    assert 'delete sanitized["Payment Request.stripe_payment_status"]' in js
     assert 'delete sanitized["Payment Request.status"]' in js
     assert 'sanitized["Project.status"]' not in js
 
@@ -207,7 +211,7 @@ def test_payment_request_reportview_override_excludes_paid():
 def test_payment_request_reportview_calls_exclude_paid_client_side():
     js = read("backdesk/public/js/workspace_sidebar.js")
 
-    assert 'window.__backdesk_sidebar_debug.version = "20260601-9"' in js
+    assert 'window.__backdesk_sidebar_debug.version = "20260601-10"' in js
     assert "patch_payment_request_reportview_call" in js
     assert "patch_payment_request_reportview_transport" in js
     assert "force_payment_request_not_paid" in js
