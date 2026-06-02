@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260601-8";
+	window.__backdesk_sidebar_debug.version = "20260601-9";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -197,12 +197,6 @@
 		if (doctype === "Payment Request") {
 			delete sanitized.status;
 			delete sanitized["Payment Request.status"];
-		}
-		if (doctype === "Project") {
-			var project_type = sanitized["Project.project_type"] || sanitized.project_type;
-			if (Array.isArray(project_type) && project_type[1] === "Build") {
-				sanitized["Project.status"] = ["not in", ["Completed", "Cancelled"]];
-			}
 		}
 		return sanitized;
 	}
