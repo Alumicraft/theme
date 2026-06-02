@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260601-10";
+	window.__backdesk_sidebar_debug.version = "20260601-11";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -383,6 +383,35 @@
 			if (lbl && lbl.textContent.trim() === label) return els[i];
 		}
 		return null;
+	}
+
+	function clean_sidebar_href_for_item(item, anchor) {
+		if (!item || !anchor) return null;
+		var label = item.label || "";
+		try {
+			var parsed = internal_list_route_from_anchor(anchor);
+			if (parsed && parsed.doctype === "Payment Request") {
+				return "/desk/payment-request/view/list";
+			}
+			if (parsed && parsed.doctype === "Project" && label === "Builds") {
+				return "/desk/project/view/list?project_type=Build";
+			}
+		} catch (e) {}
+		return null;
+	}
+
+	function normalize_sidebar_anchor_hrefs() {
+		var items = get_all_items();
+		if (!items.length) return;
+		for (var i = 0; i < items.length; i++) {
+			var item = items[i];
+			if (!item || item.type !== "Link") continue;
+			var container = find_dom_by_label(item.label);
+			if (!container) continue;
+			var anchor = container.querySelector("a.item-anchor") || container.querySelector("a");
+			var clean = clean_sidebar_href_for_item(item, anchor);
+			if (clean) anchor.setAttribute("href", clean);
+		}
 	}
 
 	function track_click(label, item) {
@@ -1154,6 +1183,7 @@
 
 		[200, 600, 1500, 3000].forEach(function (ms) {
 			setTimeout(save_last_workspace, ms);
+			setTimeout(normalize_sidebar_anchor_hrefs, ms);
 			setTimeout(function () { set_workspace_fullbleed_class("init+" + ms); }, ms);
 			setTimeout(enforce_correct_workspace, ms);
 		});
@@ -1163,6 +1193,7 @@
 		var overriding = false;
 		var observer = new MutationObserver(function () {
 			if (!_last_clicked || overriding) return;
+			normalize_sidebar_anchor_hrefs();
 			var correct = find_dom_by_label(_last_clicked.label);
 			if (!correct) return;
 			var inner = correct.querySelector(".standard-sidebar-item") || correct;
