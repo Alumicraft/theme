@@ -96,17 +96,25 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert 'item.link_type === "URL"' in js
     assert 'frappe.set_route(["List", parsed.doctype, parsed.view])' in js
     assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
-    assert 'BACKDESK_ASSET_VERSION = "20260601-11"' in hooks
+    assert 'BACKDESK_ASSET_VERSION = "20260602-1"' in hooks
     assert "sanitize_list_route_options" in js
     assert "normalize_sidebar_anchor_hrefs" in js
     assert "clean_sidebar_href_for_item" in js
-    assert 'return "/desk/payment-request/view/list"' in js
-    assert 'return "/desk/project/view/list?project_type=Build"' in js
-    assert "delete sanitized.docstatus" in js
-    assert 'delete sanitized["Payment Request.docstatus"]' in js
-    assert "delete sanitized.stripe_payment_status" in js
-    assert 'delete sanitized["Payment Request.stripe_payment_status"]' in js
-    assert 'delete sanitized["Payment Request.status"]' in js
+    assert "LIST_ROUTE_FILTER_RULES" in js
+    assert 'id: "project-builds-active"' in js
+    assert 'id: "payment-requests-unpaid"' in js
+    assert 'clean_path: "/desk/project/view/list"' in js
+    assert 'clean_path: "/desk/payment-request/view/list"' in js
+    assert 'clean_query: { project_type: "Build" }' in js
+    assert "list_filter_rule_for_context" in js
+    assert "clean_url_for_rule" in js
+    assert "rule_matches_context" in js
+    assert "delete sanitized[rule.strip_route_keys[i]]" in js
+    assert '"docstatus"' in js
+    assert '"Payment Request.docstatus"' in js
+    assert '"stripe_payment_status"' in js
+    assert '"Payment Request.stripe_payment_status"' in js
+    assert '"Payment Request.status"' in js
     assert 'sanitized["Project.status"]' not in js
 
 
@@ -215,17 +223,17 @@ def test_payment_request_reportview_override_excludes_paid():
 def test_payment_request_reportview_calls_exclude_paid_client_side():
     js = read("backdesk/public/js/workspace_sidebar.js")
 
-    assert 'window.__backdesk_sidebar_debug.version = "20260601-11"' in js
+    assert 'window.__backdesk_sidebar_debug.version = "20260602-1"' in js
     assert "patch_payment_request_reportview_call" in js
     assert "patch_payment_request_reportview_transport" in js
-    assert "force_payment_request_not_paid" in js
-    assert "force_project_build_active" in js
-    assert "force_project_build_active_params" in js
-    assert "force_payment_request_not_paid_body" in js
+    assert "apply_list_filter_rules_to_args" in js
+    assert "apply_list_filter_rules_to_params" in js
+    assert "apply_list_filter_rules_to_body" in js
+    assert "force_payment_request_not_paid" not in js
+    assert "force_project_build_active" not in js
     assert '"frappe.desk.reportview.get": true' in js
     assert '"frappe.desk.reportview.get_count": true' in js
     assert '"frappe.desk.reportview.get_list": true' in js
-    assert 'args.doctype !== "Payment Request"' in js
     assert '["Payment Request", "status", "!=", "Paid"]' in js
     assert '["Project", "status", "not in", ["Completed", "Cancelled"]]' in js
     assert "args.filters = JSON.stringify(filters)" in js

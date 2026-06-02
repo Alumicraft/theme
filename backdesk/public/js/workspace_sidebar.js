@@ -8,13 +8,48 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260601-11";
+	window.__backdesk_sidebar_debug.version = "20260602-1";
 
 	var _initialized = false;
 	var _last_clicked = null;
 	var ENTITY_WORKSPACE_PREFIX = "backdesk_workspace_for_";
 	var DOCTYPE_MAP_KEY = "backdesk_sidebar_fix_doctype_workspace";
 	var GLOBAL_KEY = "backdesk_sidebar_fix_last_workspace";
+	var LIST_ROUTE_FILTER_RULES = [
+		{
+			id: "project-builds-active",
+			doctype: "Project",
+			label: "Builds",
+			clean_path: "/desk/project/view/list",
+			clean_query: { project_type: "Build" },
+			match_route_options: {
+				"Project.project_type": ["=", "Build"],
+				project_type: ["=", "Build"],
+			},
+			strip_route_keys: [],
+			force_filters: [
+				["Project", "status", "not in", ["Completed", "Cancelled"]],
+			],
+		},
+		{
+			id: "payment-requests-unpaid",
+			doctype: "Payment Request",
+			clean_path: "/desk/payment-request/view/list",
+			clean_query: {},
+			match_route_options: {},
+			strip_route_keys: [
+				"docstatus",
+				"Payment Request.docstatus",
+				"stripe_payment_status",
+				"Payment Request.stripe_payment_status",
+				"status",
+				"Payment Request.status",
+			],
+			force_filters: [
+				["Payment Request", "status", "!=", "Paid"],
+			],
+		},
+	];
 
 	function parse_filters(str) {
 		if (!str) return [];
@@ -139,6 +174,65 @@
 		return opts;
 	}
 
+	function values_equal(a, b) {
+		return JSON.stringify(a) === JSON.stringify(b);
+	}
+
+	function option_matches(actual, expected) {
+		var a = route_option_entry(actual);
+		var e = route_option_entry(expected);
+		return normalize_operator(a[0]) === normalize_operator(e[0]) && values_equal(a[1], e[1]);
+	}
+
+	function route_option_field(key) {
+		var parts = (key || "").toString().split(".");
+		return parts[parts.length - 1] || "";
+	}
+
+	function rule_matches_context(rule, context) {
+		if (!rule || !context || context.doctype !== rule.doctype) return false;
+		if (rule.label && context.label !== rule.label) return false;
+		var required = rule.match_route_options || {};
+		var route_options = context.route_options || {};
+		var expected_keys = Object.keys(required);
+		var checked_fields = {};
+		for (var i = 0; i < expected_keys.length; i++) {
+			var key = expected_keys[i];
+			var field = route_option_field(key);
+			if (checked_fields[field]) continue;
+			checked_fields[field] = true;
+			var matched = false;
+			for (var j = 0; j < expected_keys.length; j++) {
+				var candidate = expected_keys[j];
+				if (route_option_field(candidate) !== field) continue;
+				if (
+					route_options[candidate] !== undefined &&
+					option_matches(route_options[candidate], required[candidate])
+				) {
+					matched = true;
+					break;
+				}
+			}
+			if (!matched) return false;
+		}
+		return true;
+	}
+
+	function list_filter_rule_for_context(context) {
+		for (var i = 0; i < LIST_ROUTE_FILTER_RULES.length; i++) {
+			if (rule_matches_context(LIST_ROUTE_FILTER_RULES[i], context)) {
+				return LIST_ROUTE_FILTER_RULES[i];
+			}
+		}
+		return null;
+	}
+
+	function clean_url_for_rule(rule) {
+		var query = new URLSearchParams(rule.clean_query || {});
+		var suffix = query.toString() ? "?" + query.toString() : "";
+		return rule.clean_path + suffix;
+	}
+
 	function route_options_from_anchor(anchor, item) {
 		var opts = {};
 		if (!anchor || !anchor.search) return opts;
@@ -191,16 +285,18 @@
 		return route_options_from_anchor(anchor, item);
 	}
 
-	function sanitize_list_route_options(doctype, opts) {
+	function sanitize_list_route_options(doctype, opts, context) {
 		if (!opts) return opts;
 		var sanitized = Object.assign({}, opts);
-		if (doctype === "Payment Request") {
-			delete sanitized.docstatus;
-			delete sanitized["Payment Request.docstatus"];
-			delete sanitized.stripe_payment_status;
-			delete sanitized["Payment Request.stripe_payment_status"];
-			delete sanitized.status;
-			delete sanitized["Payment Request.status"];
+		var rule = list_filter_rule_for_context({
+			doctype: doctype,
+			label: context && context.label ? context.label : "",
+			route_options: sanitized,
+		});
+		if (rule && rule.strip_route_keys) {
+			for (var i = 0; i < rule.strip_route_keys.length; i++) {
+				delete sanitized[rule.strip_route_keys[i]];
+			}
 		}
 		return sanitized;
 	}
@@ -387,15 +483,17 @@
 
 	function clean_sidebar_href_for_item(item, anchor) {
 		if (!item || !anchor) return null;
-		var label = item.label || "";
 		try {
 			var parsed = internal_list_route_from_anchor(anchor);
-			if (parsed && parsed.doctype === "Payment Request") {
-				return "/desk/payment-request/view/list";
-			}
-			if (parsed && parsed.doctype === "Project" && label === "Builds") {
-				return "/desk/project/view/list?project_type=Build";
-			}
+			if (!parsed) return null;
+			var item_with_doctype = Object.assign({}, item, { link_to: parsed.doctype });
+			var route_options = route_options_from_item(item_with_doctype, anchor);
+			var rule = list_filter_rule_for_context({
+				doctype: parsed.doctype,
+				label: item.label || "",
+				route_options: route_options,
+			});
+			return rule ? clean_url_for_rule(rule) : null;
 		} catch (e) {}
 		return null;
 	}
@@ -459,7 +557,7 @@
 			e.stopPropagation();
 			if (e.stopImmediatePropagation) e.stopImmediatePropagation();
 			var view = list_view_for_item(item, anchor);
-			opts = sanitize_list_route_options(item.link_to, opts);
+			opts = sanitize_list_route_options(item.link_to, opts, { label: label });
 			frappe.route_options = opts;
 			track_click(label, item);
 			window.__backdesk_sidebar_debug.lastClick = {
@@ -483,7 +581,7 @@
 			e.preventDefault();
 			e.stopPropagation();
 			if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-			opts = sanitize_list_route_options(parsed.doctype, opts);
+			opts = sanitize_list_route_options(parsed.doctype, opts, { label: label });
 			frappe.route_options = opts;
 			track_click(label, {
 				link_to: parsed.doctype,
@@ -914,107 +1012,89 @@
 		});
 	}
 
-	function has_payment_request_not_paid_filter(filters) {
+	function filter_equals_expected(filter, expected) {
+		var actual = filter_parts(filter);
+		var wanted = filter_parts(expected);
+		if (!actual || !wanted) return false;
+		if (wanted.doctype && actual.doctype && actual.doctype !== wanted.doctype) return false;
+		return (
+			actual.field === wanted.field &&
+			normalize_operator(actual.operator) === normalize_operator(wanted.operator) &&
+			values_equal(actual.value, wanted.value)
+		);
+	}
+
+	function filters_contain_expected(filters, expected) {
 		for (var i = 0; i < filters.length; i++) {
-			var condition = filters[i];
-			if (!Array.isArray(condition)) continue;
-			if (condition.length >= 4) {
-				if (
-					condition[0] === "Payment Request" &&
-					condition[1] === "status" &&
-					condition[2] === "!=" &&
-					condition[3] === "Paid"
-				) {
-					return true;
+			if (filter_equals_expected(filters[i], expected)) return true;
+		}
+		return false;
+	}
+
+	function filters_match_route_option(filters, key, expected) {
+		var field = route_option_field(key);
+		var entry = route_option_entry(expected);
+		for (var i = 0; i < filters.length; i++) {
+			var actual = filter_parts(filters[i]);
+			if (!actual || actual.field !== field) continue;
+			if (normalize_operator(actual.operator) !== normalize_operator(entry[0])) continue;
+			if (values_equal(actual.value, entry[1])) return true;
+		}
+		return false;
+	}
+
+	function rule_matches_reportview_filters(rule, filters) {
+		var required = rule.match_route_options || {};
+		var expected_keys = Object.keys(required);
+		var checked_fields = {};
+		for (var i = 0; i < expected_keys.length; i++) {
+			var key = expected_keys[i];
+			var field = route_option_field(key);
+			if (checked_fields[field]) continue;
+			checked_fields[field] = true;
+			var matched = false;
+			for (var j = 0; j < expected_keys.length; j++) {
+				var candidate = expected_keys[j];
+				if (route_option_field(candidate) !== field) continue;
+				if (filters_match_route_option(filters, candidate, required[candidate])) {
+					matched = true;
+					break;
 				}
-			} else if (condition.length >= 3) {
-				if (condition[0] === "status" && condition[1] === "!=" && condition[2] === "Paid") {
-					return true;
+			}
+			if (!matched) return false;
+		}
+		return true;
+	}
+
+	function apply_list_filter_rules_to_args(args) {
+		if (!args || !args.doctype) return false;
+		var filters = normalize_reportview_filters(args.filters);
+		var matched = false;
+		for (var i = 0; i < LIST_ROUTE_FILTER_RULES.length; i++) {
+			var rule = LIST_ROUTE_FILTER_RULES[i];
+			if (rule.doctype !== args.doctype) continue;
+			if (!rule_matches_reportview_filters(rule, filters)) continue;
+			matched = true;
+			for (var j = 0; j < rule.force_filters.length; j++) {
+				if (!filters_contain_expected(filters, rule.force_filters[j])) {
+					filters.push(rule.force_filters[j]);
 				}
 			}
 		}
-		return false;
-	}
-
-	function filter_field(condition) {
-		if (!Array.isArray(condition)) return null;
-		if (condition.length >= 4) return condition[1];
-		if (condition.length >= 3) return condition[0];
-		return null;
-	}
-
-	function filter_operator(condition) {
-		if (!Array.isArray(condition)) return null;
-		if (condition.length >= 4) return condition[2];
-		if (condition.length >= 3) return condition[1];
-		return null;
-	}
-
-	function filter_value(condition) {
-		if (!Array.isArray(condition)) return null;
-		if (condition.length >= 4) return condition[3];
-		if (condition.length >= 3) return condition[2];
-		return null;
-	}
-
-	function has_project_build_filter(filters) {
-		for (var i = 0; i < filters.length; i++) {
-			var condition = filters[i];
-			if (filter_field(condition) !== "project_type") continue;
-			var value = filter_value(condition);
-			if (value === "Build") return true;
-			if (Array.isArray(value) && value.indexOf("Build") !== -1) return true;
-		}
-		return false;
-	}
-
-	function has_project_build_status_exclusion(filters) {
-		for (var i = 0; i < filters.length; i++) {
-			var condition = filters[i];
-			if (filter_field(condition) !== "status") continue;
-			if ((filter_operator(condition) || "").toString().toLowerCase() !== "not in") continue;
-			var value = filter_value(condition);
-			return Array.isArray(value) && value.indexOf("Completed") !== -1 && value.indexOf("Cancelled") !== -1;
-		}
-		return false;
-	}
-
-	function force_payment_request_not_paid(args) {
-		if (!args || args.doctype !== "Payment Request") return;
-		var filters = normalize_reportview_filters(args.filters);
-		if (!has_payment_request_not_paid_filter(filters)) {
-			filters.push(["Payment Request", "status", "!=", "Paid"]);
-		}
+		if (!matched) return false;
 		args.filters = JSON.stringify(filters);
+		return true;
 	}
 
-	function force_project_build_active(args) {
-		if (!args || args.doctype !== "Project") return;
-		var filters = normalize_reportview_filters(args.filters);
-		if (has_project_build_filter(filters) && !has_project_build_status_exclusion(filters)) {
-			filters.push(["Project", "status", "not in", ["Completed", "Cancelled"]]);
-			args.filters = JSON.stringify(filters);
-		}
-	}
-
-	function force_payment_request_not_paid_params(params) {
+	function apply_list_filter_rules_to_params(params) {
 		if (!params) return false;
-		if (params.get("doctype") !== "Payment Request") return false;
-		var filters = normalize_reportview_filters(params.get("filters"));
-		if (!has_payment_request_not_paid_filter(filters)) {
-			filters.push(["Payment Request", "status", "!=", "Paid"]);
-		}
-		params.set("filters", JSON.stringify(filters));
-		return true;
-	}
-
-	function force_project_build_active_params(params) {
-		if (!params || params.get("doctype") !== "Project") return false;
-		var filters = normalize_reportview_filters(params.get("filters"));
-		if (!has_project_build_filter(filters) || has_project_build_status_exclusion(filters)) return false;
-		filters.push(["Project", "status", "not in", ["Completed", "Cancelled"]]);
-		params.set("filters", JSON.stringify(filters));
-		return true;
+		var args = {
+			doctype: params.get("doctype"),
+			filters: params.get("filters"),
+		};
+		var changed = apply_list_filter_rules_to_args(args);
+		if (changed) params.set("filters", args.filters);
+		return changed;
 	}
 
 	function reportview_url(url) {
@@ -1023,34 +1103,24 @@
 		);
 	}
 
-	function force_payment_request_not_paid_body(body) {
+	function apply_list_filter_rules_to_body(body) {
 		try {
 			if (!body) return body;
 			if (typeof URLSearchParams !== "undefined" && body instanceof URLSearchParams) {
-				force_payment_request_not_paid_params(body);
-				force_project_build_active_params(body);
+				apply_list_filter_rules_to_params(body);
 				return body;
 			}
 			if (typeof FormData !== "undefined" && body instanceof FormData) {
-				var filters = normalize_reportview_filters(body.get("filters"));
-				if (body.get("doctype") === "Payment Request" && !has_payment_request_not_paid_filter(filters)) {
-					filters.push(["Payment Request", "status", "!=", "Paid"]);
-					body.set("filters", JSON.stringify(filters));
-				}
-				if (body.get("doctype") === "Project") {
-					var project_filters = normalize_reportview_filters(body.get("filters"));
-					if (has_project_build_filter(project_filters) && !has_project_build_status_exclusion(project_filters)) {
-						project_filters.push(["Project", "status", "not in", ["Completed", "Cancelled"]]);
-						body.set("filters", JSON.stringify(project_filters));
-					}
-				}
+				var args = {
+					doctype: body.get("doctype"),
+					filters: body.get("filters"),
+				};
+				if (apply_list_filter_rules_to_args(args)) body.set("filters", args.filters);
 				return body;
 			}
 			if (typeof body === "string") {
 				var params = new URLSearchParams(body);
-				var changed = force_payment_request_not_paid_params(params);
-				changed = force_project_build_active_params(params) || changed;
-				if (changed) return params.toString();
+				if (apply_list_filter_rules_to_params(params)) return params.toString();
 			}
 		} catch (e) {}
 		return body;
@@ -1070,8 +1140,7 @@
 		frappe.call = function (opts) {
 			try {
 				if (typeof opts === "object" && opts && reportview_methods[opts.method]) {
-					force_payment_request_not_paid(opts.args);
-					force_project_build_active(opts.args);
+					apply_list_filter_rules_to_args(opts.args);
 				}
 			} catch (e) {}
 			return original_call.apply(this, arguments);
@@ -1097,7 +1166,7 @@
 					return original_open.apply(this, arguments);
 				};
 				window.XMLHttpRequest.prototype.send = function (body) {
-					if (this._backdesk_reportview_url) body = force_payment_request_not_paid_body(body);
+					if (this._backdesk_reportview_url) body = apply_list_filter_rules_to_body(body);
 					return original_send.call(this, body);
 				};
 				window.XMLHttpRequest.prototype._backdesk_payment_request_filter_patched = true;
@@ -1110,7 +1179,7 @@
 						var url = typeof input === "string" ? input : input && input.url;
 						if (reportview_url(url) && init && init.body) {
 							init = Object.assign({}, init, {
-								body: force_payment_request_not_paid_body(init.body),
+								body: apply_list_filter_rules_to_body(init.body),
 							});
 						}
 					} catch (e) {}
