@@ -44,7 +44,7 @@
 			strip_route_keys: [],
 			default_filters: [
 				["Project", "project_type", "in", ["Service/Parts", "Consignment"]],
-				["Project", "status", "in", ["Open", "In progress"]],
+				["Project", "status", "not in", ["Completed", "Cancelled"]],
 			],
 		},
 		{

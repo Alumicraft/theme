@@ -236,7 +236,7 @@ def test_workspace_sidebar_applies_removable_default_filters_client_side():
     assert "force_payment_request_not_paid" not in js
     assert "force_project_build_active" not in js
     assert '["Payment Request", "status", "not in", ["Paid", "Cancelled"]]' in js
-    assert '["Project", "status", "in", ["Open", "In progress"]]' in js
+    assert '["Project", "status", "not in", ["Completed", "Cancelled"]]' in js
     assert '["Project", "project_type", "in", ["Service/Parts", "Consignment"]]' in js
     assert "defaults[route_option.key] = route_option.entry" in js
     assert "frappe.route_options = opts" in js
