@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260602-6";
+	window.__backdesk_sidebar_debug.version = "20260602-7";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -219,6 +219,7 @@
 	function rule_matches_context(rule, context) {
 		if (!rule || !context || context.doctype !== rule.doctype) return false;
 		if (rule.label && context.label !== rule.label) return false;
+		if (rule.label && context.label === rule.label) return true;
 		var required = rule.match_route_options || {};
 		var route_options = context.route_options || {};
 		var expected_keys = Object.keys(required);

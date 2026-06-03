@@ -131,7 +131,7 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert "frappe.set_route(route_for_rule(item.link_to, label, opts, view))" in js
     assert "frappe.set_route(route_for_rule(parsed.doctype, label, opts, view))" in js
     assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
-    assert 'BACKDESK_ASSET_VERSION = "20260602-6"' in hooks
+    assert 'BACKDESK_ASSET_VERSION = "20260602-7"' in hooks
     assert "sanitize_list_route_options" in js
     assert "normalize_sidebar_anchor_hrefs" in js
     assert "clean_sidebar_href_for_item" in js
@@ -150,6 +150,7 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert "list_filter_rule_for_context" in js
     assert "clean_url_for_rule" in js
     assert "rule_matches_context" in js
+    assert "if (rule.label && context.label === rule.label) return true;" in js
     assert "preferred_view_for_rule" in js
     assert "preferred_view_for_rule(item.link_to, label, opts)" in js
     assert "preferred_view_for_rule(parsed.doctype, label, opts)" in js
@@ -268,7 +269,7 @@ def test_payment_request_reportview_override_is_not_hard_enforced():
 def test_workspace_sidebar_applies_removable_default_filters_client_side():
     js = read("backdesk/public/js/workspace_sidebar.js")
 
-    assert 'window.__backdesk_sidebar_debug.version = "20260602-6"' in js
+    assert 'window.__backdesk_sidebar_debug.version = "20260602-7"' in js
     assert "default_filters" in js
     assert "apply_default_filters_for_rule" in js
     assert "route_options_with_default_filters" in js
