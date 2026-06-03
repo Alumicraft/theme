@@ -1,4 +1,7 @@
 from pathlib import Path
+import importlib
+import sys
+import types
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -6,6 +9,36 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def read(relative_path):
     return (ROOT / relative_path).read_text()
+
+
+def load_api_with_frappe_stub():
+    frappe = types.ModuleType("frappe")
+    frappe._ = lambda value: value
+    frappe.whitelist = lambda *args, **kwargs: (lambda fn: fn)
+    frappe.parse_json = lambda value: value
+    frappe.bold = lambda value: value
+    frappe.throw = lambda *args, **kwargs: None
+    frappe.PermissionError = Exception
+    frappe.DoesNotExistError = Exception
+    frappe.session = types.SimpleNamespace(user="Administrator")
+
+    desk = types.ModuleType("frappe.desk")
+    desktop = types.ModuleType("frappe.desk.desktop")
+    desktop.save_new_widget = lambda *args, **kwargs: None
+    doctype = types.ModuleType("frappe.desk.doctype")
+    workspace_pkg = types.ModuleType("frappe.desk.doctype.workspace")
+    workspace = types.ModuleType("frappe.desk.doctype.workspace.workspace")
+    workspace.is_workspace_manager = lambda: True
+
+    sys.modules["frappe"] = frappe
+    sys.modules["frappe.desk"] = desk
+    sys.modules["frappe.desk.desktop"] = desktop
+    sys.modules["frappe.desk.doctype"] = doctype
+    sys.modules["frappe.desk.doctype.workspace"] = workspace_pkg
+    sys.modules["frappe.desk.doctype.workspace.workspace"] = workspace
+
+    sys.modules.pop("backdesk.api", None)
+    return importlib.import_module("backdesk.api")
 
 
 def test_workspace_fullwidth_css_scopes_to_workspace_shells():
@@ -94,9 +127,9 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert "Object.assign({}, item" in js
     assert "link_to: parsed.doctype" in js
     assert 'item.link_type === "URL"' in js
-    assert 'frappe.set_route(["List", parsed.doctype, parsed.view])' in js
+    assert 'frappe.set_route(["List", parsed.doctype, view])' in js
     assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
-    assert 'BACKDESK_ASSET_VERSION = "20260602-4"' in hooks
+    assert 'BACKDESK_ASSET_VERSION = "20260602-5"' in hooks
     assert "sanitize_list_route_options" in js
     assert "normalize_sidebar_anchor_hrefs" in js
     assert "clean_sidebar_href_for_item" in js
@@ -104,7 +137,7 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert 'id: "project-builds-active"' in js
     assert 'id: "service-parts-active"' in js
     assert 'id: "payment-requests-unpaid"' in js
-    assert 'clean_path: "/desk/project/view/list"' in js
+    assert 'clean_path: "/desk/project/view/kanban"' in js
     assert 'clean_path: "/desk/payment-request/view/list"' in js
     assert 'clean_query: { project_type: "Build" }' in js
     assert 'clean_query: { project_type: "Service/Parts" }' in js
@@ -112,6 +145,10 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert "list_filter_rule_for_context" in js
     assert "clean_url_for_rule" in js
     assert "rule_matches_context" in js
+    assert "preferred_view_for_rule" in js
+    assert "preferred_view_for_rule(item.link_to, label, opts)" in js
+    assert "preferred_view_for_rule(parsed.doctype, label, opts)" in js
+    assert 'preferred_view: "Kanban"' in js
     assert "apply_default_filters_for_rule" in js
     assert "default_filters" in js
     assert "force_filters" not in js
@@ -224,7 +261,7 @@ def test_payment_request_reportview_override_is_not_hard_enforced():
 def test_workspace_sidebar_applies_removable_default_filters_client_side():
     js = read("backdesk/public/js/workspace_sidebar.js")
 
-    assert 'window.__backdesk_sidebar_debug.version = "20260602-4"' in js
+    assert 'window.__backdesk_sidebar_debug.version = "20260602-5"' in js
     assert "default_filters" in js
     assert "apply_default_filters_for_rule" in js
     assert "route_options_with_default_filters" in js
@@ -257,6 +294,44 @@ def test_api_contains_boot_sidebar_cleanup_and_desktop_icon_override():
     assert "def get_layout_with_icons():" in api
     assert '"Desktop Layout"' in api
     assert '"Desktop Icon"' in api
+
+
+def test_boot_sidebar_cleanup_normalizes_spacers_in_list_and_object_payloads():
+    api = load_api_with_frappe_stub()
+    bootinfo = {
+        "workspace_sidebar_item": {
+            "jobs": {
+                "items": [
+                    {"type": "Section Break", "label": "Finance"},
+                    {
+                        "type": "Spacer",
+                        "child": 1,
+                        "nested_items": [
+                            {"type": "Spacer"},
+                        ],
+                    },
+                    {"type": "Link", "label": "Broken"},
+                    {"type": "Link", "label": "External", "link_type": "URL"},
+                ]
+            },
+            "recently-edited": [
+                {"type": "Spacer"},
+                {"type": "Section Break", "label": "Reports"},
+            ],
+        }
+    }
+
+    api.boot_session(bootinfo)
+
+    jobs_items = bootinfo["workspace_sidebar_item"]["jobs"]["items"]
+    edited_items = bootinfo["workspace_sidebar_item"]["recently-edited"]
+
+    assert jobs_items[0]["indent"] == 1
+    assert jobs_items[1]["standard"] is True
+    assert jobs_items[1]["nested_items"][0]["standard"] is True
+    assert jobs_items[2]["label"] == "External"
+    assert edited_items[0]["standard"] is True
+    assert edited_items[1]["indent"] == 1
 
 
 def test_api_contains_workspace_save_override():

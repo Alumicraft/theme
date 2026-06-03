@@ -34,6 +34,14 @@ def _normalize_sidebar_items(items):
     return cleaned
 
 
+def _normalize_sidebar(sidebar):
+    if isinstance(sidebar, list):
+        return _normalize_sidebar_items(sidebar)
+
+    sidebar["items"] = _normalize_sidebar_items(sidebar.get("items") or [])
+    return sidebar
+
+
 def boot_session(bootinfo):
     """Defensively normalize v15/v16 Desk workspace sidebar and icon data."""
     for item in (_boot_value(bootinfo, "desktop_icons", []) or []):
@@ -44,8 +52,8 @@ def boot_session(bootinfo):
             item["icon"] = None
 
     sidebar_items = _boot_value(bootinfo, "workspace_sidebar_item", {}) or {}
-    for _name, sidebar in sidebar_items.items():
-        sidebar["items"] = _normalize_sidebar_items(sidebar.get("items") or [])
+    for name, sidebar in sidebar_items.items():
+        sidebar_items[name] = _normalize_sidebar(sidebar)
 
 
 def _can_edit_workspace(doc):

@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260602-4";
+	window.__backdesk_sidebar_debug.version = "20260602-5";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -20,8 +20,9 @@
 			id: "project-builds-active",
 			doctype: "Project",
 			label: "Builds",
-			clean_path: "/desk/project/view/list",
+			clean_path: "/desk/project/view/kanban",
 			clean_query: { project_type: "Build" },
+			preferred_view: "Kanban",
 			match_route_options: {
 				"Project.project_type": ["=", "Build"],
 				project_type: ["=", "Build"],
@@ -35,8 +36,9 @@
 			id: "service-parts-active",
 			doctype: "Project",
 			label: "Service/Parts",
-			clean_path: "/desk/project/view/list",
+			clean_path: "/desk/project/view/kanban",
 			clean_query: { project_type: "Service/Parts" },
+			preferred_view: "Kanban",
 			match_route_options: {
 				"Project.project_type": ["=", "Service/Parts"],
 				project_type: ["=", "Service/Parts"],
@@ -247,6 +249,15 @@
 		var query = new URLSearchParams(rule.clean_query || {});
 		var suffix = query.toString() ? "?" + query.toString() : "";
 		return rule.clean_path + suffix;
+	}
+
+	function preferred_view_for_rule(doctype, label, opts) {
+		var rule = list_filter_rule_for_context({
+			doctype: doctype,
+			label: label,
+			route_options: opts || {},
+		});
+		return rule && rule.preferred_view ? rule.preferred_view : null;
 	}
 
 	function route_options_from_anchor(anchor, item) {
@@ -602,7 +613,7 @@
 			e.preventDefault();
 			e.stopPropagation();
 			if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-			var view = list_view_for_item(item, anchor);
+			var view = preferred_view_for_rule(item.link_to, label, opts) || list_view_for_item(item, anchor);
 			opts = sanitize_list_route_options(item.link_to, opts, { label: label });
 			opts = route_options_with_default_filters(item.link_to, opts, { label: label });
 			frappe.route_options = opts;
@@ -634,13 +645,14 @@
 			track_click(label, {
 				link_to: parsed.doctype,
 			});
+			var view = preferred_view_for_rule(parsed.doctype, label, opts) || parsed.view;
 			window.__backdesk_sidebar_debug.lastUrlClick = {
 				label: label,
 				doctype: parsed.doctype,
-				view: parsed.view,
+				view: view,
 				opts: opts,
 			};
-			frappe.set_route(["List", parsed.doctype, parsed.view]);
+			frappe.set_route(["List", parsed.doctype, view]);
 			return;
 		}
 
