@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260602-5";
+	window.__backdesk_sidebar_debug.version = "20260602-6";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -20,33 +20,42 @@
 			id: "project-builds-active",
 			doctype: "Project",
 			label: "Builds",
-			clean_path: "/desk/project/view/kanban",
-			clean_query: { project_type: "Build" },
+			clean_path: "/desk/project/view/kanban/Builds",
+			clean_query: {
+				status: '["!=","Completed"]',
+				project_type: "Build",
+			},
 			preferred_view: "Kanban",
+			preferred_view_name: "Builds",
 			match_route_options: {
 				"Project.project_type": ["=", "Build"],
 				project_type: ["=", "Build"],
 			},
-			strip_route_keys: [],
+			strip_route_keys: ["Project.project_type", "project_type", "Project.status", "status"],
 			default_filters: [
-				["Project", "status", "in", ["Open", "In progress"]],
+				["Project", "status", "!=", "Completed"],
+				["Project", "project_type", "=", "Build"],
 			],
 		},
 		{
 			id: "service-parts-active",
 			doctype: "Project",
 			label: "Service/Parts",
-			clean_path: "/desk/project/view/kanban",
-			clean_query: { project_type: "Service/Parts" },
+			clean_path: "/desk/project/view/kanban/Service%2FParts",
+			clean_query: {
+				status: '["not in",["Completed","Cancelled","Canceled"]]',
+				project_type: '["!=","Build"]',
+			},
 			preferred_view: "Kanban",
+			preferred_view_name: "Service/Parts",
 			match_route_options: {
 				"Project.project_type": ["=", "Service/Parts"],
 				project_type: ["=", "Service/Parts"],
 			},
-			strip_route_keys: [],
+			strip_route_keys: ["Project.project_type", "project_type", "Project.status", "status"],
 			default_filters: [
-				["Project", "project_type", "in", ["Service/Parts", "Consignment"]],
-				["Project", "status", "not in", ["Completed", "Cancelled"]],
+				["Project", "project_type", "!=", "Build"],
+				["Project", "status", "not in", ["Completed", "Cancelled", "Canceled"]],
 			],
 		},
 		{
@@ -258,6 +267,17 @@
 			route_options: opts || {},
 		});
 		return rule && rule.preferred_view ? rule.preferred_view : null;
+	}
+
+	function route_for_rule(doctype, label, opts, view) {
+		var route = ["List", doctype, view];
+		var rule = list_filter_rule_for_context({
+			doctype: doctype,
+			label: label,
+			route_options: opts || {},
+		});
+		if (rule && rule.preferred_view_name) route.push(rule.preferred_view_name);
+		return route;
 	}
 
 	function route_options_from_anchor(anchor, item) {
@@ -624,7 +644,7 @@
 				view: view,
 				opts: opts,
 			};
-			frappe.set_route(["List", item.link_to, view]);
+			frappe.set_route(route_for_rule(item.link_to, label, opts, view));
 			return;
 		}
 
@@ -652,7 +672,7 @@
 				view: view,
 				opts: opts,
 			};
-			frappe.set_route(["List", parsed.doctype, view]);
+			frappe.set_route(route_for_rule(parsed.doctype, label, opts, view));
 			return;
 		}
 

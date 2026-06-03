@@ -127,9 +127,11 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert "Object.assign({}, item" in js
     assert "link_to: parsed.doctype" in js
     assert 'item.link_type === "URL"' in js
-    assert 'frappe.set_route(["List", parsed.doctype, view])' in js
+    assert "route_for_rule" in js
+    assert "frappe.set_route(route_for_rule(item.link_to, label, opts, view))" in js
+    assert "frappe.set_route(route_for_rule(parsed.doctype, label, opts, view))" in js
     assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
-    assert 'BACKDESK_ASSET_VERSION = "20260602-5"' in hooks
+    assert 'BACKDESK_ASSET_VERSION = "20260602-6"' in hooks
     assert "sanitize_list_route_options" in js
     assert "normalize_sidebar_anchor_hrefs" in js
     assert "clean_sidebar_href_for_item" in js
@@ -137,10 +139,13 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert 'id: "project-builds-active"' in js
     assert 'id: "service-parts-active"' in js
     assert 'id: "payment-requests-unpaid"' in js
-    assert 'clean_path: "/desk/project/view/kanban"' in js
+    assert 'clean_path: "/desk/project/view/kanban/Builds"' in js
+    assert 'clean_path: "/desk/project/view/kanban/Service%2FParts"' in js
     assert 'clean_path: "/desk/payment-request/view/list"' in js
-    assert 'clean_query: { project_type: "Build" }' in js
-    assert 'clean_query: { project_type: "Service/Parts" }' in js
+    assert 'project_type: "Build"' in js
+    assert 'status: \'["!=","Completed"]\'' in js
+    assert 'status: \'["not in",["Completed","Cancelled","Canceled"]]\'' in js
+    assert 'project_type: \'["!=","Build"]\'' in js
     assert 'label: "Service/Parts"' in js
     assert "list_filter_rule_for_context" in js
     assert "clean_url_for_rule" in js
@@ -149,6 +154,8 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert "preferred_view_for_rule(item.link_to, label, opts)" in js
     assert "preferred_view_for_rule(parsed.doctype, label, opts)" in js
     assert 'preferred_view: "Kanban"' in js
+    assert 'preferred_view_name: "Builds"' in js
+    assert 'preferred_view_name: "Service/Parts"' in js
     assert "apply_default_filters_for_rule" in js
     assert "default_filters" in js
     assert "force_filters" not in js
@@ -261,7 +268,7 @@ def test_payment_request_reportview_override_is_not_hard_enforced():
 def test_workspace_sidebar_applies_removable_default_filters_client_side():
     js = read("backdesk/public/js/workspace_sidebar.js")
 
-    assert 'window.__backdesk_sidebar_debug.version = "20260602-5"' in js
+    assert 'window.__backdesk_sidebar_debug.version = "20260602-6"' in js
     assert "default_filters" in js
     assert "apply_default_filters_for_rule" in js
     assert "route_options_with_default_filters" in js
@@ -273,8 +280,9 @@ def test_workspace_sidebar_applies_removable_default_filters_client_side():
     assert "force_payment_request_not_paid" not in js
     assert "force_project_build_active" not in js
     assert '["Payment Request", "status", "not in", ["Paid", "Cancelled"]]' in js
-    assert '["Project", "status", "not in", ["Completed", "Cancelled"]]' in js
-    assert '["Project", "project_type", "in", ["Service/Parts", "Consignment"]]' in js
+    assert '["Project", "status", "!=", "Completed"]' in js
+    assert '["Project", "status", "not in", ["Completed", "Cancelled", "Canceled"]]' in js
+    assert '["Project", "project_type", "!=", "Build"]' in js
     assert "defaults[route_option.key] = route_option.entry" in js
     assert "frappe.route_options = opts" in js
 
