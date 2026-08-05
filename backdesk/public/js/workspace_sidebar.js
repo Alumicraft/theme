@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260805-2";
+	window.__backdesk_sidebar_debug.version = "20260805-3";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -587,7 +587,10 @@
 	function route_needs_workspace_recovery(route) {
 		var pathname = window.location && window.location.pathname;
 		if (/^\/(?:desk|app)\/?$/.test(pathname || "")) return true;
-		if (!route || !route.length) return true;
+		// During a hard load Frappe briefly exposes an empty route before it
+		// parses the concrete URL. Recovering in that window replaces valid
+		// Form, List, and Report URLs with the remembered workspace.
+		if (!route || !route.length) return false;
 		var slug = workspace_slug_from_route(route);
 		return !!slug && !backdesk_workspace_label(slug);
 	}

@@ -137,7 +137,7 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert "frappe.set_route(route_for_rule(item.link_to, label, opts, view))" in js
     assert "frappe.set_route(route_for_rule(parsed.doctype, label, opts, view))" in js
     assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
-    assert 'BACKDESK_ASSET_VERSION = "20260804-3"' in hooks
+    assert 'BACKDESK_ASSET_VERSION = "20260805-3"' in hooks
     assert "sanitize_list_route_options" in js
     assert "normalize_sidebar_anchor_hrefs" in js
     assert "clean_sidebar_href_for_item" in js
@@ -282,7 +282,7 @@ def test_payment_request_reportview_override_is_not_hard_enforced():
 def test_workspace_sidebar_applies_removable_default_filters_client_side():
     js = read("backdesk/public/js/workspace_sidebar.js")
 
-    assert 'window.__backdesk_sidebar_debug.version = "20260804-3"' in js
+    assert 'window.__backdesk_sidebar_debug.version = "20260805-3"' in js
     assert "default_filters" in js
     assert "apply_default_filters_for_rule" in js
     assert "route_options_with_default_filters" in js
@@ -443,6 +443,24 @@ def test_followup_patch_repairs_blank_overview_and_employee_names():
     assert "NULLIF(e.last_name, '')" in patch
     assert "NULLIF(e.first_name, '')" in patch
     assert '"e.name, e.last_name, e.first_name"' in patch
+
+
+def test_financial_chart_patch_uses_current_pnl_and_recognized_project_margin():
+    patches = read("backdesk/patches.txt")
+    workspace_patch = read("backdesk/patches/v0_0_2/repair_workspace_sidebar.py")
+    chart_patch = read("backdesk/patches/v0_0_2/repair_financial_charts.py")
+
+    assert "backdesk.patches.v0_0_2.repair_financial_charts" in patches
+    assert '"chart_name": "Profit and Loss New"' in workspace_patch
+    assert 'filters={"chart_name": old_name}' in chart_patch
+    assert 'data.get("chart_name") == old_name' in chart_patch
+    assert 'account.root_type = \'Income\'' in chart_patch
+    assert 'account.root_type = \'Expense\'' in chart_patch
+    assert "gle.is_cancelled = 0" in chart_patch
+    assert "p.total_consumed_material_cost" in chart_patch
+    assert "GREATEST(" in chart_patch
+    assert 'AS "Recognized Gross Margin"' in chart_patch
+    assert "p.name NOT IN ('INVENTORY', 'SHOP')" in chart_patch
 
 
 def test_item_catalog_conversion_is_inventory_guarded():
