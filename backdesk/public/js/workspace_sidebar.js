@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260602-7";
+	window.__backdesk_sidebar_debug.version = "20260804-1";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -22,7 +22,7 @@
 			label: "Builds",
 			clean_path: "/desk/project/view/kanban/Builds",
 			clean_query: {
-				status: '["!=","Completed"]',
+				status: '["not in",["Completed","Cancelled","Canceled"]]',
 				project_type: "Build",
 			},
 			preferred_view: "Kanban",
@@ -33,7 +33,7 @@
 			},
 			strip_route_keys: ["Project.project_type", "project_type", "Project.status", "status"],
 			default_filters: [
-				["Project", "status", "!=", "Completed"],
+				["Project", "status", "not in", ["Completed", "Cancelled", "Canceled"]],
 				["Project", "project_type", "=", "Build"],
 			],
 		},
@@ -57,6 +57,104 @@
 				["Project", "project_type", "!=", "Build"],
 				["Project", "status", "not in", ["Completed", "Cancelled", "Canceled"]],
 			],
+		},
+		{
+			id: "timesheets-draft",
+			doctype: "Timesheet",
+			label: "Draft Timesheets",
+			clean_path: "/desk/timesheet/view/list",
+			clean_query: { docstatus: "0" },
+			match_route_options: { docstatus: ["=", 0] },
+			strip_route_keys: ["docstatus", "Timesheet.docstatus"],
+			default_filters: [["Timesheet", "docstatus", "=", 0]],
+		},
+		{
+			id: "timesheets-submitted",
+			doctype: "Timesheet",
+			label: "Timesheets",
+			clean_path: "/desk/timesheet/view/list",
+			clean_query: { docstatus: "1" },
+			match_route_options: { docstatus: ["=", 1] },
+			strip_route_keys: ["docstatus", "Timesheet.docstatus"],
+			default_filters: [["Timesheet", "docstatus", "=", 1]],
+		},
+		{
+			id: "sales-orders-active",
+			doctype: "Sales Order",
+			clean_path: "/desk/sales-order/view/list",
+			clean_query: {
+				docstatus: "1",
+				status: '["not in",["Completed","Cancelled","Closed"]]',
+			},
+			match_route_options: {},
+			strip_route_keys: ["docstatus", "Sales Order.docstatus", "status", "Sales Order.status"],
+			default_filters: [
+				["Sales Order", "docstatus", "=", 1],
+				["Sales Order", "status", "not in", ["Completed", "Cancelled", "Closed"]],
+			],
+		},
+		{
+			id: "sales-invoices-outstanding",
+			doctype: "Sales Invoice",
+			clean_path: "/desk/sales-invoice/view/list",
+			clean_query: {
+				docstatus: "1",
+				status: '["not in",["Paid","Cancelled"]]',
+			},
+			match_route_options: {},
+			strip_route_keys: ["docstatus", "Sales Invoice.docstatus", "status", "Sales Invoice.status"],
+			default_filters: [
+				["Sales Invoice", "docstatus", "=", 1],
+				["Sales Invoice", "status", "not in", ["Paid", "Cancelled"]],
+			],
+		},
+		{
+			id: "purchase-orders-active",
+			doctype: "Purchase Order",
+			clean_path: "/desk/purchase-order/view/list",
+			clean_query: {
+				docstatus: "1",
+				status: '["not in",["Completed","Cancelled","Closed"]]',
+			},
+			match_route_options: {},
+			strip_route_keys: ["docstatus", "Purchase Order.docstatus", "status", "Purchase Order.status"],
+			default_filters: [
+				["Purchase Order", "docstatus", "=", 1],
+				["Purchase Order", "status", "not in", ["Completed", "Cancelled", "Closed"]],
+			],
+		},
+		{
+			id: "purchase-invoices-outstanding",
+			doctype: "Purchase Invoice",
+			clean_path: "/desk/purchase-invoice/view/list",
+			clean_query: {
+				docstatus: "1",
+				status: '["not in",["Paid","Cancelled"]]',
+			},
+			match_route_options: {},
+			strip_route_keys: ["docstatus", "Purchase Invoice.docstatus", "status", "Purchase Invoice.status"],
+			default_filters: [
+				["Purchase Invoice", "docstatus", "=", 1],
+				["Purchase Invoice", "status", "not in", ["Paid", "Cancelled"]],
+			],
+		},
+		{
+			id: "suppliers-enabled",
+			doctype: "Supplier",
+			clean_path: "/desk/supplier/view/list",
+			clean_query: { disabled: "0" },
+			match_route_options: {},
+			strip_route_keys: ["disabled", "Supplier.disabled", "status", "Supplier.status"],
+			default_filters: [["Supplier", "disabled", "=", 0]],
+		},
+		{
+			id: "roles-all",
+			doctype: "Role",
+			clean_path: "/desk/role/view/list",
+			clean_query: {},
+			match_route_options: {},
+			strip_route_keys: ["enabled", "Role.enabled"],
+			default_filters: [],
 		},
 		{
 			id: "payment-requests-unpaid",
@@ -963,6 +1061,10 @@
 						}
 
 						function handle_success(response) {
+							// Frappe calls both the legacy callback and the returned
+							// Promise handler. Only the first completion should reload,
+							// notify, and navigate the workspace.
+							if (completed) return;
 							if (response && response.exc) {
 								workspace.reload();
 								finish(false);
@@ -989,12 +1091,14 @@
 							},
 							callback: handle_success,
 							error: function () {
+								if (completed) return;
 								workspace.reload();
 								finish(false);
 							},
 						});
 						if (request && typeof request.then === "function") {
 							request.then(handle_success).catch(function () {
+								if (completed) return;
 								workspace.reload();
 								finish(false);
 							});

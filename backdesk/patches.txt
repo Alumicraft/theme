@@ -1,1 +1,2 @@
 backdesk.patches.v0_0_1.remove_module_workspace
+backdesk.patches.v0_0_2.repair_workspace_sidebar

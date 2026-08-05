@@ -131,19 +131,26 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert "frappe.set_route(route_for_rule(item.link_to, label, opts, view))" in js
     assert "frappe.set_route(route_for_rule(parsed.doctype, label, opts, view))" in js
     assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
-    assert 'BACKDESK_ASSET_VERSION = "20260602-7"' in hooks
+    assert 'BACKDESK_ASSET_VERSION = "20260804-1"' in hooks
     assert "sanitize_list_route_options" in js
     assert "normalize_sidebar_anchor_hrefs" in js
     assert "clean_sidebar_href_for_item" in js
     assert "LIST_ROUTE_FILTER_RULES" in js
     assert 'id: "project-builds-active"' in js
     assert 'id: "service-parts-active"' in js
+    assert 'id: "timesheets-draft"' in js
+    assert 'id: "timesheets-submitted"' in js
+    assert 'id: "sales-orders-active"' in js
+    assert 'id: "sales-invoices-outstanding"' in js
+    assert 'id: "purchase-orders-active"' in js
+    assert 'id: "purchase-invoices-outstanding"' in js
+    assert 'id: "suppliers-enabled"' in js
+    assert 'id: "roles-all"' in js
     assert 'id: "payment-requests-unpaid"' in js
     assert 'clean_path: "/desk/project/view/kanban/Builds"' in js
     assert 'clean_path: "/desk/project/view/kanban/Service%2FParts"' in js
     assert 'clean_path: "/desk/payment-request/view/list"' in js
     assert 'project_type: "Build"' in js
-    assert 'status: \'["!=","Completed"]\'' in js
     assert 'status: \'["not in",["Completed","Cancelled","Canceled"]]\'' in js
     assert 'project_type: \'["!=","Build"]\'' in js
     assert 'label: "Service/Parts"' in js
@@ -269,7 +276,7 @@ def test_payment_request_reportview_override_is_not_hard_enforced():
 def test_workspace_sidebar_applies_removable_default_filters_client_side():
     js = read("backdesk/public/js/workspace_sidebar.js")
 
-    assert 'window.__backdesk_sidebar_debug.version = "20260602-7"' in js
+    assert 'window.__backdesk_sidebar_debug.version = "20260804-1"' in js
     assert "default_filters" in js
     assert "apply_default_filters_for_rule" in js
     assert "route_options_with_default_filters" in js
@@ -281,7 +288,6 @@ def test_workspace_sidebar_applies_removable_default_filters_client_side():
     assert "force_payment_request_not_paid" not in js
     assert "force_project_build_active" not in js
     assert '["Payment Request", "status", "not in", ["Paid", "Cancelled"]]' in js
-    assert '["Project", "status", "!=", "Completed"]' in js
     assert '["Project", "status", "not in", ["Completed", "Cancelled", "Canceled"]]' in js
     assert '["Project", "project_type", "!=", "Build"]' in js
     assert "defaults[route_option.key] = route_option.entry" in js
@@ -385,3 +391,33 @@ def test_visible_app_identity_is_backdesk():
 
     visible_text = "\n".join([hooks, setup, modules, desktop, install, patch, readme])
     assert "Monocore Theme" not in visible_text
+
+
+def test_workspace_sidebar_patch_repairs_production_navigation_idempotently():
+    patches = read("backdesk/patches.txt")
+    patch = read("backdesk/patches/v0_0_2/repair_workspace_sidebar.py")
+
+    assert "backdesk.patches.v0_0_2.repair_workspace_sidebar" in patches
+    assert 'item.label == "Recievables"' in patch
+    assert 'item.link_to = "Sales Order"' in patch
+    assert 'item.link_to = "Payment Request"' in patch
+    assert 'item.link_to = "User Permission"' in patch
+    assert 'item.link_to = "permission-inspector"' in patch
+    assert 'existing_labels = {item.label for item in doc.items if item.label}' in patch
+    assert 'if values["label"] in existing_labels:' in patch
+    assert '"Warehouses"' in patch
+    assert '"Stock Balance"' in patch
+    assert '"Stock Entries"' in patch
+    assert '"Material Requests"' in patch
+    assert '"Purchase Orders"' in patch
+    assert '"Active Builds"' in patch
+    assert '"Active Service / Parts"' in patch
+    assert '"Receivables Due"' in patch
+    assert '"Payables Due"' in patch
+    assert '"Profit and Loss New"' in patch
+    assert '"type": "number_card"' in patch
+    assert '"type": "chart"' in patch
+    assert 'doc.content == "[]"' in patch
+    assert '"Build Count": [' in patch
+    assert '"Service/Parts Count": [' in patch
+    assert '["Project", "status", "not in", ["Completed", "Cancelled", "Canceled"]]' in patch
