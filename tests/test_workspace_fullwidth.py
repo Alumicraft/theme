@@ -445,6 +445,20 @@ def test_followup_patch_repairs_blank_overview_and_employee_names():
     assert '"e.name, e.last_name, e.first_name"' in patch
 
 
+def test_item_catalog_conversion_is_inventory_guarded():
+    patch = read("backdesk/patches/v0_0_2/convert_items_to_non_stock_catalog.py")
+
+    assert '"Stock Ledger Entry"' in patch
+    assert '"Bin"' in patch
+    assert '"BOM"' in patch
+    assert '"Work Order"' in patch
+    assert '"Stock Entry"' in patch
+    assert "if populated:" in patch
+    assert "SET is_stock_item = 0" in patch
+    assert "include_item_in_manufacturing = 0" in patch
+    assert 'NON_CATALOG_LINKS = {"BOMs", "Purchase Receipts"}' in patch
+
+
 def test_product_workflow_correction_removes_inventory_links():
     patches = read("backdesk/patches.txt")
     patch = read("backdesk/patches/v0_0_2/correct_product_sales_workflow.py")
