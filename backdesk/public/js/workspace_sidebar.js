@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260804-2";
+	window.__backdesk_sidebar_debug.version = "20260804-3";
 
 	var _initialized = false;
 	var _last_clicked = null;

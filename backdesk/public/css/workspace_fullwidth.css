@@ -91,6 +91,16 @@ html[data-theme="dark"] body:has(.workspace-body) .navbar .btn-reset {
     color: var(--backdesk-workspace-navbar-foreground) !important;
 }
 
+html[data-theme="dark"] body.backdesk-workspace-fullbleed .body-sidebar-container .standard-sidebar-item,
+html[data-theme="dark"] body.backdesk-workspace-fullbleed .body-sidebar-container .sidebar-item-label,
+html[data-theme="dark"] body[data-route^="Workspaces/"] .body-sidebar-container .standard-sidebar-item,
+html[data-theme="dark"] body[data-route^="Workspaces/"] .body-sidebar-container .sidebar-item-label,
+html[data-theme="dark"] body:has(.workspace-body) .body-sidebar-container .standard-sidebar-item,
+html[data-theme="dark"] body:has(.workspace-body) .body-sidebar-container .sidebar-item-label {
+    --icon-stroke: var(--backdesk-workspace-navbar-foreground);
+    color: var(--backdesk-workspace-navbar-foreground) !important;
+}
+
 body.backdesk-workspace-fullbleed [data-page-route="Workspaces"] .widget.spacer,
 body[data-route^="Workspaces/"] [data-page-route="Workspaces"] .widget.spacer,
 body:has(.workspace-body) [data-page-route="Workspaces"] .widget.spacer {
