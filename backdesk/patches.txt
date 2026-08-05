@@ -1,3 +1,4 @@
 backdesk.patches.v0_0_1.remove_module_workspace
 backdesk.patches.v0_0_2.repair_workspace_sidebar
 backdesk.patches.v0_0_2.correct_product_sales_workflow
+backdesk.patches.v0_0_2.repair_overview_and_time_reporting

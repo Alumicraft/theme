@@ -429,6 +429,22 @@ def test_workspace_sidebar_patch_repairs_production_navigation_idempotently():
     assert '["Project", "status", "not in", ["Completed", "Cancelled", "Canceled"]]' in patch
 
 
+def test_followup_patch_repairs_blank_overview_and_employee_names():
+    patch = (
+        ROOT
+        / "backdesk"
+        / "patches"
+        / "v0_0_2"
+        / "repair_overview_and_time_reporting.py"
+    ).read_text()
+
+    assert "required_ids.issubset(ids)" in patch
+    assert "doc.content = json.dumps(OVERVIEW_CONTENT" in patch
+    assert "NULLIF(e.last_name, '')" in patch
+    assert "NULLIF(e.first_name, '')" in patch
+    assert '"e.name, e.last_name, e.first_name"' in patch
+
+
 def test_product_workflow_correction_removes_inventory_links():
     patches = read("backdesk/patches.txt")
     patch = read("backdesk/patches/v0_0_2/correct_product_sales_workflow.py")
