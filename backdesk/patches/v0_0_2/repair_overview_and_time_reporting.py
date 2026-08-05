@@ -62,5 +62,8 @@ def repair_weekly_time_employee_names():
     if updated == query:
         return
 
-    doc.query = updated
-    doc.save(ignore_permissions=True)
+    # This legacy report contains client-side JavaScript in its ``script``
+    # field. Frappe 16 validates that field as Python when the full document is
+    # saved, even though this patch only changes the SQL query. Update the
+    # query directly so the unrelated legacy script cannot block migration.
+    frappe.db.set_value("Report", name, "query", updated, update_modified=True)
