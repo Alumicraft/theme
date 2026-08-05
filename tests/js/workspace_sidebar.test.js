@@ -141,6 +141,17 @@ test("bare Desk route restores the last Alumicraft workspace with history replac
 	assert.deepEqual(harness.counts.replacements, ["/desk/jobs"]);
 });
 
+test("concrete Desk route is preserved while Frappe boot route is temporarily empty", () => {
+	const harness = loadHarness(() => Promise.resolve({}), {
+		route: [],
+		pathname: "/desk/quickbook-settings/Quickbook%20Settings",
+		hasSidebar: false,
+		stored: { backdesk_sidebar_fix_last_workspace: "Jobs" },
+	});
+
+	assert.deepEqual(harness.counts.replacements, []);
+});
+
 test("stock Selling workspace is replaced by the last Alumicraft workspace", () => {
 	const harness = loadHarness(() => Promise.resolve({}), {
 		route: ["Workspaces", "Selling"],

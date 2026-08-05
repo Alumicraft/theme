@@ -3,3 +3,4 @@ backdesk.patches.v0_0_2.repair_workspace_sidebar
 backdesk.patches.v0_0_2.correct_product_sales_workflow
 backdesk.patches.v0_0_2.repair_overview_and_time_reporting
 backdesk.patches.v0_0_2.convert_items_to_non_stock_catalog
+backdesk.patches.v0_0_2.repair_financial_charts

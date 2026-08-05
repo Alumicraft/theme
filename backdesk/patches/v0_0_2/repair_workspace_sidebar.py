@@ -61,7 +61,7 @@ OVERVIEW_CONTENT = [
     {
         "id": "backdesk-overview-pnl",
         "type": "chart",
-        "data": {"chart_name": "Profit and Loss", "col": 12},
+        "data": {"chart_name": "Profit and Loss New", "col": 12},
     },
 ]
 
