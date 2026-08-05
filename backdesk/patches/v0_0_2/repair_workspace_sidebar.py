@@ -5,16 +5,14 @@ import frappe
 
 PRODUCT_LINKS = (
     {
-        "label": "Inventory Workflow",
+        "label": "Sales Workflow",
         "link_type": "DocType",
-        "icon": "boxes",
+        "icon": "sell",
         "type": "Section Break",
     },
-    {"label": "Warehouses", "link_type": "DocType", "type": "Link", "link_to": "Warehouse"},
-    {"label": "Stock Balance", "link_type": "Report", "type": "Link", "link_to": "Stock Balance"},
-    {"label": "Stock Entries", "link_type": "DocType", "type": "Link", "link_to": "Stock Entry"},
-    {"label": "Material Requests", "link_type": "DocType", "type": "Link", "link_to": "Material Request"},
-    {"label": "Purchase Orders", "link_type": "DocType", "type": "Link", "link_to": "Purchase Order"},
+    {"label": "Quotations", "link_type": "DocType", "type": "Link", "link_to": "Quotation"},
+    {"label": "Sales Orders", "link_type": "DocType", "type": "Link", "link_to": "Sales Order"},
+    {"label": "Sales Invoices", "link_type": "DocType", "type": "Link", "link_to": "Sales Invoice"},
 )
 
 OVERVIEW_NUMBER_CARDS = (

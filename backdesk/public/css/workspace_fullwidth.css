@@ -29,6 +29,7 @@ html[data-theme="dark"] body.backdesk-workspace-fullbleed,
 html[data-theme="dark"] body:has(.workspace-body) {
     --backdesk-workspace-bg: var(--surface-menu-bar, #0f0f0f);
     --backdesk-workspace-navbar-bg: var(--surface-menu-bar, #0f0f0f);
+    --backdesk-workspace-navbar-foreground: #ffffff;
     --backdesk-workspace-border: var(--sidebar-border-color, var(--border-color, rgba(255, 255, 255, 0.08)));
     --backdesk-workspace-shadow: none;
 }
@@ -72,6 +73,22 @@ body:has(.workspace-body) .navbar {
     background: var(--backdesk-workspace-navbar-bg) !important;
     border-bottom: 1px solid var(--backdesk-workspace-border) !important;
     box-shadow: var(--backdesk-workspace-shadow) !important;
+}
+
+html[data-theme="dark"] body.backdesk-workspace-fullbleed .navbar,
+html[data-theme="dark"] body[data-route^="Workspaces/"] .navbar,
+html[data-theme="dark"] body:has(.workspace-body) .navbar {
+    --icon-stroke: var(--backdesk-workspace-navbar-foreground);
+    color: var(--backdesk-workspace-navbar-foreground) !important;
+}
+
+html[data-theme="dark"] body.backdesk-workspace-fullbleed .navbar .nav-link,
+html[data-theme="dark"] body.backdesk-workspace-fullbleed .navbar .btn-reset,
+html[data-theme="dark"] body[data-route^="Workspaces/"] .navbar .nav-link,
+html[data-theme="dark"] body[data-route^="Workspaces/"] .navbar .btn-reset,
+html[data-theme="dark"] body:has(.workspace-body) .navbar .nav-link,
+html[data-theme="dark"] body:has(.workspace-body) .navbar .btn-reset {
+    color: var(--backdesk-workspace-navbar-foreground) !important;
 }
 
 body.backdesk-workspace-fullbleed [data-page-route="Workspaces"] .widget.spacer,

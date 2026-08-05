@@ -70,6 +70,10 @@ def test_workspace_fullwidth_css_styles_workspace_background_and_navbar_only():
     assert "body.backdesk-workspace-fullbleed [data-page-route=\"Workspaces\"] .widget.spacer" in css
     assert 'body[data-route^="Workspaces/"] [data-page-route="Workspaces"] .widget.spacer' in css
     assert 'html[data-theme="dark"] body.backdesk-workspace-fullbleed' in css
+    assert "--backdesk-workspace-navbar-foreground: #ffffff" in css
+    assert "--icon-stroke: var(--backdesk-workspace-navbar-foreground)" in css
+    assert ".navbar .nav-link" in css
+    assert ".navbar .btn-reset" in css
     assert "--backdesk-workspace-bg: var(--surface-menu-bar" in css
     assert "--backdesk-workspace-navbar-bg: var(--surface-menu-bar" in css
     assert "--backdesk-workspace-border: var(--sidebar-border-color" in css
@@ -131,7 +135,7 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert "frappe.set_route(route_for_rule(item.link_to, label, opts, view))" in js
     assert "frappe.set_route(route_for_rule(parsed.doctype, label, opts, view))" in js
     assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
-    assert 'BACKDESK_ASSET_VERSION = "20260804-1"' in hooks
+    assert 'BACKDESK_ASSET_VERSION = "20260804-2"' in hooks
     assert "sanitize_list_route_options" in js
     assert "normalize_sidebar_anchor_hrefs" in js
     assert "clean_sidebar_href_for_item" in js
@@ -276,7 +280,7 @@ def test_payment_request_reportview_override_is_not_hard_enforced():
 def test_workspace_sidebar_applies_removable_default_filters_client_side():
     js = read("backdesk/public/js/workspace_sidebar.js")
 
-    assert 'window.__backdesk_sidebar_debug.version = "20260804-1"' in js
+    assert 'window.__backdesk_sidebar_debug.version = "20260804-2"' in js
     assert "default_filters" in js
     assert "apply_default_filters_for_rule" in js
     assert "route_options_with_default_filters" in js
@@ -405,11 +409,10 @@ def test_workspace_sidebar_patch_repairs_production_navigation_idempotently():
     assert 'item.link_to = "permission-inspector"' in patch
     assert 'existing_labels = {item.label for item in doc.items if item.label}' in patch
     assert 'if values["label"] in existing_labels:' in patch
-    assert '"Warehouses"' in patch
-    assert '"Stock Balance"' in patch
-    assert '"Stock Entries"' in patch
-    assert '"Material Requests"' in patch
-    assert '"Purchase Orders"' in patch
+    assert '"Sales Workflow"' in patch
+    assert '"Quotations"' in patch
+    assert '"Sales Orders"' in patch
+    assert '"Sales Invoices"' in patch
     assert '"Active Builds"' in patch
     assert '"Active Service / Parts"' in patch
     assert '"Receivables Due"' in patch
@@ -421,3 +424,15 @@ def test_workspace_sidebar_patch_repairs_production_navigation_idempotently():
     assert '"Build Count": [' in patch
     assert '"Service/Parts Count": [' in patch
     assert '["Project", "status", "not in", ["Completed", "Cancelled", "Canceled"]]' in patch
+
+
+def test_product_workflow_correction_removes_inventory_links():
+    patches = read("backdesk/patches.txt")
+    patch = read("backdesk/patches/v0_0_2/correct_product_sales_workflow.py")
+
+    assert "backdesk.patches.v0_0_2.correct_product_sales_workflow" in patches
+    assert '"Inventory Workflow"' in patch
+    assert '"Warehouses"' in patch
+    assert '"Stock Entries"' in patch
+    assert '"Quotations"' not in patch
+    assert "for values in PRODUCT_LINKS:" in patch
