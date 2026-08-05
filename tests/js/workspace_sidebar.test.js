@@ -29,7 +29,7 @@ function loadHarness(callImplementation, options = {}) {
 		head: { appendChild() {} },
 		querySelector(selector) {
 			if (selector === ".body-sidebar-container" || selector === ".body-sidebar") {
-				return sidebar;
+				return options.hasSidebar === false ? null : sidebar;
 			}
 			return null;
 		},
@@ -132,8 +132,9 @@ test("workspace save completes once when Frappe uses callback and Promise", asyn
 
 test("bare Desk route restores the last Alumicraft workspace with history replacement", () => {
 	const harness = loadHarness(() => Promise.resolve({}), {
-		route: [],
+		route: ["desk"],
 		pathname: "/desk",
+		hasSidebar: false,
 		stored: { backdesk_sidebar_fix_last_workspace: "Jobs" },
 	});
 

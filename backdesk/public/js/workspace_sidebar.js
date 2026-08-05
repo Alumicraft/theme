@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260805-1";
+	window.__backdesk_sidebar_debug.version = "20260805-2";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -585,6 +585,8 @@
 	}
 
 	function route_needs_workspace_recovery(route) {
+		var pathname = window.location && window.location.pathname;
+		if (/^\/(?:desk|app)\/?$/.test(pathname || "")) return true;
 		if (!route || !route.length) return true;
 		var slug = workspace_slug_from_route(route);
 		return !!slug && !backdesk_workspace_label(slug);
@@ -1336,6 +1338,7 @@
 
 	function try_init(n) {
 		if (n <= 0) return;
+		if (recover_workspace_route()) return;
 		if (!init()) setTimeout(function () { try_init(n - 1); }, 500);
 	}
 
