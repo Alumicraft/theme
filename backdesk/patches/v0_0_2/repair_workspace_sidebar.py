@@ -113,15 +113,18 @@ def repair_access():
         return
 
     changed = False
-    for item in doc.items:
+    for item in list(doc.items):
         if item.label == "User Permissions" and item.link_to == "Role":
             item.link_type = "DocType"
             item.link_to = "User Permission"
             changed = True
-        elif item.link_to == "Permission Inspector":
-            item.label = "Permission Inspector"
-            item.link_type = "Page"
-            item.link_to = "permission-inspector"
+        elif item.link_to in {"Permission Inspector", "permission-inspector"}:
+            if frappe.db.exists("Page", "permission-inspector"):
+                item.label = "Permission Inspector"
+                item.link_type = "Page"
+                item.link_to = "permission-inspector"
+            else:
+                doc.remove(item)
             changed = True
 
     save_if_changed(doc, changed)

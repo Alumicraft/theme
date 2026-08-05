@@ -408,7 +408,8 @@ def test_workspace_sidebar_patch_repairs_production_navigation_idempotently():
     assert 'item.link_to = "Sales Order"' in patch
     assert 'item.link_to = "Payment Request"' in patch
     assert 'item.link_to = "User Permission"' in patch
-    assert 'item.link_to = "permission-inspector"' in patch
+    assert 'frappe.db.exists("Page", "permission-inspector")' in patch
+    assert "doc.remove(item)" in patch
     assert 'existing_labels = {item.label for item in doc.items if item.label}' in patch
     assert 'if values["label"] in existing_labels:' in patch
     assert '"Sales Workflow"' in patch
