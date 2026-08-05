@@ -8,13 +8,16 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260804-3";
+	window.__backdesk_sidebar_debug.version = "20260805-1";
 
 	var _initialized = false;
 	var _last_clicked = null;
 	var ENTITY_WORKSPACE_PREFIX = "backdesk_workspace_for_";
 	var DOCTYPE_MAP_KEY = "backdesk_sidebar_fix_doctype_workspace";
 	var GLOBAL_KEY = "backdesk_sidebar_fix_last_workspace";
+	var BACKDESK_WORKSPACES = ["Overview", "Jobs", "Products", "Finance", "Contacts", "Access", "Terminal"];
+	var DEFAULT_BACKDESK_WORKSPACE = "Overview";
+	var _workspace_redirecting = false;
 	var LIST_ROUTE_FILTER_RULES = [
 		{
 			id: "project-builds-active",
@@ -547,6 +550,69 @@
 		return null;
 	}
 
+	function backdesk_workspace_label(value) {
+		var workspace = workspace_from_slug(value);
+		var target = normalize(workspace ? workspace.label : value);
+		if (!target) return null;
+		for (var i = 0; i < BACKDESK_WORKSPACES.length; i++) {
+			if (normalize(BACKDESK_WORKSPACES[i]) === target) {
+				var available = workspace_from_slug(BACKDESK_WORKSPACES[i]);
+				return available ? available.label : null;
+			}
+		}
+		return null;
+	}
+
+	function preferred_backdesk_workspace() {
+		var remembered = null;
+		try {
+			remembered = localStorage.getItem(GLOBAL_KEY);
+		} catch (e) {}
+		var label = backdesk_workspace_label(remembered);
+		if (label) return label;
+
+		var sb = frappe.app && frappe.app.sidebar;
+		label = backdesk_workspace_label(sb && (sb.current_workspace || sb.sidebar_title));
+		if (label) return label;
+
+		label = backdesk_workspace_label(DEFAULT_BACKDESK_WORKSPACE);
+		if (label) return label;
+		for (var i = 0; i < BACKDESK_WORKSPACES.length; i++) {
+			label = backdesk_workspace_label(BACKDESK_WORKSPACES[i]);
+			if (label) return label;
+		}
+		return null;
+	}
+
+	function route_needs_workspace_recovery(route) {
+		if (!route || !route.length) return true;
+		var slug = workspace_slug_from_route(route);
+		return !!slug && !backdesk_workspace_label(slug);
+	}
+
+	function recover_workspace_route() {
+		if (_workspace_redirecting) return false;
+		try {
+			var route = frappe.get_route ? frappe.get_route() || [] : [];
+			if (!route_needs_workspace_recovery(route)) return false;
+			var workspace = preferred_backdesk_workspace();
+			if (!workspace) return false;
+			var path = "/desk/" + slugify(workspace);
+			if (window.location && window.location.pathname === path) return false;
+			if (!window.location || typeof window.location.replace !== "function") return false;
+			_workspace_redirecting = true;
+			window.__backdesk_sidebar_debug.workspaceRecovery = {
+				from: route.slice ? route.slice() : route,
+				to: path,
+			};
+			window.location.replace(path);
+			return true;
+		} catch (e) {
+			_workspace_redirecting = false;
+			return false;
+		}
+	}
+
 	function candidate_label(label, candidates) {
 		var workspace = workspace_from_slug(label);
 		var target = normalize(workspace ? workspace.label : label);
@@ -580,11 +646,11 @@
 	}
 
 	function remember_workspace_for_entity(entity, workspace_name) {
-		var workspace = workspace_from_slug(workspace_name);
+		var workspace = backdesk_workspace_label(workspace_name);
 		if (!entity || !workspace) return false;
 		try {
-			localStorage.setItem(ENTITY_WORKSPACE_PREFIX + normalize(entity), workspace.label);
-			localStorage.setItem(GLOBAL_KEY, workspace.label);
+			localStorage.setItem(ENTITY_WORKSPACE_PREFIX + normalize(entity), workspace);
+			localStorage.setItem(GLOBAL_KEY, workspace);
 			return true;
 		} catch (e) {
 			return false;
@@ -593,14 +659,14 @@
 
 	function remember_doctype_workspace(doctype) {
 		if (!doctype) return false;
-		var workspace = workspace_from_slug(get_workspace_name());
+		var workspace = backdesk_workspace_label(get_workspace_name());
 		if (!workspace) return false;
 		try {
 			var map = read_doctype_map();
-			map[doctype] = workspace.label;
-			map[normalize(doctype)] = workspace.label;
+			map[doctype] = workspace;
+			map[normalize(doctype)] = workspace;
 			localStorage.setItem(DOCTYPE_MAP_KEY, JSON.stringify(map));
-			localStorage.setItem(GLOBAL_KEY, workspace.label);
+			localStorage.setItem(GLOBAL_KEY, workspace);
 			return true;
 		} catch (e) {
 			return false;
@@ -887,7 +953,10 @@
 		try {
 			var route = frappe.get_route() || [];
 			var ws_slug = workspace_slug_from_route(route);
-			if (ws_slug && workspace_from_slug(ws_slug)) return null;
+			if (ws_slug && workspace_from_slug(ws_slug)) {
+				return backdesk_workspace_label(ws_slug) ? null : preferred_backdesk_workspace();
+			}
+			if (!route.length) return preferred_backdesk_workspace();
 
 			var entity = null;
 			if (route.length >= 2) entity = route[1];
@@ -922,9 +991,9 @@
 			var route = frappe.get_route() || [];
 			var slug = workspace_slug_from_route(route);
 			if (!slug) return false;
-			var workspace = workspace_from_slug(slug);
+			var workspace = backdesk_workspace_label(slug);
 			if (!workspace) return false;
-			localStorage.setItem(GLOBAL_KEY, workspace.label);
+			localStorage.setItem(GLOBAL_KEY, workspace);
 			return true;
 		} catch (e) {
 			return false;
@@ -1224,6 +1293,7 @@
 		try_patch_workspace_save_page(20);
 		try_watch_sidebar_title(20);
 		$(window).on("beforeunload", save_last_workspace);
+		if (recover_workspace_route()) return true;
 
 		[200, 600, 1500, 3000].forEach(function (ms) {
 			setTimeout(save_last_workspace, ms);
@@ -1249,6 +1319,7 @@
 		observer.observe(sb, { attributes: true, attributeFilter: ["class"], subtree: true });
 
 		var on_route = function () {
+			if (recover_workspace_route()) return;
 			set_workspace_fullbleed_class("route");
 			setTimeout(function () { fix_active_retry(5); }, 300);
 			setTimeout(enforce_correct_workspace, 200);
