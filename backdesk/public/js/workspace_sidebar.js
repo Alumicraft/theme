@@ -8,13 +8,14 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260805-3";
+	window.__backdesk_sidebar_debug.version = "20260813-1";
 
 	var _initialized = false;
 	var _last_clicked = null;
 	var ENTITY_WORKSPACE_PREFIX = "backdesk_workspace_for_";
 	var DOCTYPE_MAP_KEY = "backdesk_sidebar_fix_doctype_workspace";
 	var GLOBAL_KEY = "backdesk_sidebar_fix_last_workspace";
+	var SESSION_KEY = "backdesk_sidebar_fix_tab_workspace";
 	var BACKDESK_WORKSPACES = ["Overview", "Jobs", "Products", "Finance", "Contacts", "Access", "Terminal"];
 	var DEFAULT_BACKDESK_WORKSPACE = "Overview";
 	var _workspace_redirecting = false;
@@ -566,9 +567,15 @@
 	function preferred_backdesk_workspace() {
 		var remembered = null;
 		try {
-			remembered = localStorage.getItem(GLOBAL_KEY);
+			remembered = sessionStorage.getItem(SESSION_KEY);
 		} catch (e) {}
 		var label = backdesk_workspace_label(remembered);
+		if (label) return label;
+
+		try {
+			remembered = localStorage.getItem(GLOBAL_KEY);
+		} catch (e) {}
+		label = backdesk_workspace_label(remembered);
 		if (label) return label;
 
 		var sb = frappe.app && frappe.app.sidebar;
@@ -602,15 +609,22 @@
 			if (!route_needs_workspace_recovery(route)) return false;
 			var workspace = preferred_backdesk_workspace();
 			if (!workspace) return false;
-			var path = "/desk/" + slugify(workspace);
-			if (window.location && window.location.pathname === path) return false;
-			if (!window.location || typeof window.location.replace !== "function") return false;
+			var slug = slugify(workspace);
+			if (!slug || typeof frappe.set_route !== "function") return false;
 			_workspace_redirecting = true;
 			window.__backdesk_sidebar_debug.workspaceRecovery = {
 				from: route.slice ? route.slice() : route,
-				to: path,
+				to: slug,
+				method: "spa-replace",
 			};
-			window.location.replace(path);
+			frappe.route_flags = frappe.route_flags || {};
+			frappe.route_flags.replace_route = true;
+			var request = frappe.set_route([slug]);
+			if (request && typeof request.finally === "function") {
+				request.finally(function () { _workspace_redirecting = false; });
+			} else {
+				setTimeout(function () { _workspace_redirecting = false; }, 500);
+			}
 			return true;
 		} catch (e) {
 			_workspace_redirecting = false;
@@ -656,6 +670,7 @@
 		try {
 			localStorage.setItem(ENTITY_WORKSPACE_PREFIX + normalize(entity), workspace);
 			localStorage.setItem(GLOBAL_KEY, workspace);
+			sessionStorage.setItem(SESSION_KEY, workspace);
 			return true;
 		} catch (e) {
 			return false;
@@ -672,6 +687,7 @@
 			map[normalize(doctype)] = workspace;
 			localStorage.setItem(DOCTYPE_MAP_KEY, JSON.stringify(map));
 			localStorage.setItem(GLOBAL_KEY, workspace);
+			sessionStorage.setItem(SESSION_KEY, workspace);
 			return true;
 		} catch (e) {
 			return false;
@@ -999,6 +1015,7 @@
 			var workspace = backdesk_workspace_label(slug);
 			if (!workspace) return false;
 			localStorage.setItem(GLOBAL_KEY, workspace);
+			sessionStorage.setItem(SESSION_KEY, workspace);
 			return true;
 		} catch (e) {
 			return false;
