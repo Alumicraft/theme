@@ -6,3 +6,4 @@ backdesk.patches.v0_0_2.convert_items_to_non_stock_catalog
 backdesk.patches.v0_0_2.repair_financial_charts
 backdesk.patches.v0_0_2.repair_financial_charts_v2
 backdesk.patches.v0_0_2.repair_financial_charts_v3
+backdesk.patches.v0_0_2.add_project_profitability_report_link

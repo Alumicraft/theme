@@ -437,6 +437,16 @@ def test_workspace_sidebar_patch_repairs_production_navigation_idempotently():
     assert '["Project", "status", "not in", ["Completed", "Cancelled", "Canceled"]]' in patch
 
 
+def test_project_profitability_report_link_patch_is_registered():
+    patches = read("backdesk/patches.txt")
+    patch = read("backdesk/patches/v0_0_2/add_project_profitability_report_link.py")
+
+    assert "backdesk.patches.v0_0_2.add_project_profitability_report_link" in patches
+    assert 'REPORT_NAME = "Project Profitability"' in patch
+    assert 'frappe.db.exists("Workspace Sidebar", "Jobs")' in patch
+    assert '"link_type": "Report"' in patch
+
+
 def test_followup_patch_repairs_blank_overview_and_employee_names():
     patch = (
         ROOT
