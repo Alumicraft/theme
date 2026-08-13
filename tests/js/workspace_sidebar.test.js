@@ -12,8 +12,9 @@ const SCRIPT = fs.readFileSync(
 );
 
 function loadHarness(callImplementation, options = {}) {
-	const counts = { alerts: 0, reloads: 0, routes: 0, replacements: [] };
+	const counts = { alerts: 0, reloads: 0, routes: 0, routeArgs: [], replacements: [] };
 	const stored = { ...(options.stored || {}) };
+	const sessionStored = { ...(options.sessionStored || {}) };
 	const sidebar = {
 		addEventListener() {},
 		getAttribute() { return "Jobs"; },
@@ -64,7 +65,12 @@ function loadHarness(callImplementation, options = {}) {
 		call: callImplementation,
 		get_route() { return options.route || ["Workspaces", "Jobs"]; },
 		router: { on() {}, slug(value) { return value.toLowerCase(); } },
-		set_route() { counts.routes += 1; },
+		route_flags: {},
+		set_route(...args) {
+			counts.routes += 1;
+			counts.routeArgs.push(args);
+			return Promise.resolve();
+		},
 		show_alert() { counts.alerts += 1; },
 		ui: {},
 		workspace,
@@ -87,6 +93,10 @@ function loadHarness(callImplementation, options = {}) {
 			getItem(key) { return stored[key] ?? null; },
 			setItem(key, value) { stored[key] = value; },
 		},
+		sessionStorage: {
+			getItem(key) { return sessionStored[key] ?? null; },
+			setItem(key, value) { sessionStored[key] = value; },
+		},
 		setInterval() { return 1; },
 		clearInterval() {},
 		setTimeout() { return 1; },
@@ -105,7 +115,7 @@ function loadHarness(callImplementation, options = {}) {
 	context.window.frappe = frappe;
 	context.window.$ = jquery;
 	vm.runInNewContext(SCRIPT, context);
-	return { counts, frappe, workspace, stored };
+	return { counts, frappe, workspace, stored, sessionStored };
 }
 
 test("workspace save completes once when Frappe uses callback and Promise", async () => {
@@ -130,7 +140,7 @@ test("workspace save completes once when Frappe uses callback and Promise", asyn
 	assert.equal(harness.counts.routes, 1);
 });
 
-test("bare Desk route restores the last Alumicraft workspace with history replacement", () => {
+test("bare Desk route restores the last Alumicraft workspace with SPA history replacement", () => {
 	const harness = loadHarness(() => Promise.resolve({}), {
 		route: ["desk"],
 		pathname: "/desk",
@@ -138,7 +148,22 @@ test("bare Desk route restores the last Alumicraft workspace with history replac
 		stored: { backdesk_sidebar_fix_last_workspace: "Jobs" },
 	});
 
-	assert.deepEqual(harness.counts.replacements, ["/desk/jobs"]);
+	assert.deepEqual(harness.counts.replacements, []);
+	assert.equal(JSON.stringify(harness.counts.routeArgs), JSON.stringify([[["jobs"]]]));
+	assert.equal(harness.frappe.route_flags.replace_route, true);
+});
+
+test("bare Desk route prefers the tab workspace over another tab's global workspace", () => {
+	const harness = loadHarness(() => Promise.resolve({}), {
+		route: ["desk"],
+		pathname: "/desk",
+		hasSidebar: false,
+		stored: { backdesk_sidebar_fix_last_workspace: "Jobs" },
+		sessionStored: { backdesk_sidebar_fix_tab_workspace: "Finance" },
+	});
+
+	assert.deepEqual(harness.counts.replacements, []);
+	assert.equal(JSON.stringify(harness.counts.routeArgs), JSON.stringify([[["finance"]]]));
 });
 
 test("concrete Desk route is preserved while Frappe boot route is temporarily empty", () => {
@@ -159,7 +184,8 @@ test("stock Selling workspace is replaced by the last Alumicraft workspace", () 
 		stored: { backdesk_sidebar_fix_last_workspace: "Finance" },
 	});
 
-	assert.deepEqual(harness.counts.replacements, ["/desk/finance"]);
+	assert.deepEqual(harness.counts.replacements, []);
+	assert.equal(JSON.stringify(harness.counts.routeArgs), JSON.stringify([[["finance"]]]));
 });
 
 test("stock workspace cannot become the remembered Alumicraft workspace", () => {
@@ -170,7 +196,8 @@ test("stock workspace cannot become the remembered Alumicraft workspace", () => 
 		stored: { backdesk_sidebar_fix_last_workspace: "Selling" },
 	});
 
-	assert.deepEqual(harness.counts.replacements, ["/desk/overview"]);
+	assert.deepEqual(harness.counts.replacements, []);
+	assert.equal(JSON.stringify(harness.counts.routeArgs), JSON.stringify([[["overview"]]]));
 });
 
 test("valid Alumicraft workspace stays on its current route", () => {

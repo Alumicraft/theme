@@ -282,7 +282,7 @@ def test_payment_request_reportview_override_is_not_hard_enforced():
 def test_workspace_sidebar_applies_removable_default_filters_client_side():
     js = read("backdesk/public/js/workspace_sidebar.js")
 
-    assert 'window.__backdesk_sidebar_debug.version = "20260805-3"' in js
+    assert 'window.__backdesk_sidebar_debug.version = "20260813-1"' in js
     assert "default_filters" in js
     assert "apply_default_filters_for_rule" in js
     assert "route_options_with_default_filters" in js
@@ -451,16 +451,23 @@ def test_financial_chart_patch_uses_current_pnl_and_recognized_project_margin():
     chart_patch = read("backdesk/patches/v0_0_2/repair_financial_charts.py")
 
     assert "backdesk.patches.v0_0_2.repair_financial_charts" in patches
+    assert "backdesk.patches.v0_0_2.repair_financial_charts_v2" in patches
     assert '"chart_name": "Profit and Loss New"' in workspace_patch
     assert 'filters={"chart_name": old_name}' in chart_patch
     assert 'data.get("chart_name") == old_name' in chart_patch
+    assert '"from_fiscal_year": fiscal_year' in chart_patch
+    assert '"to_fiscal_year": fiscal_year' in chart_patch
     assert 'account.root_type = \'Income\'' in chart_patch
     assert 'account.root_type = \'Expense\'' in chart_patch
     assert "gle.is_cancelled = 0" in chart_patch
     assert "p.total_consumed_material_cost" in chart_patch
     assert "GREATEST(" in chart_patch
-    assert 'AS "Recognized Gross Margin"' in chart_patch
     assert "p.name NOT IN ('INVENTORY', 'SHOP')" in chart_patch
+    assert 'AS "Recognized Gross Margin:Currency:150"' in chart_patch
+    assert 'doc.x_field = "project"' in chart_patch
+    assert 'expected_axis = [("recognized_gross_margin", "#C97A40")]' in chart_patch
+    assert "doc.show_values_over_chart = 1" in chart_patch
+    assert 'doc.currency = "USD"' in chart_patch
 
 
 def test_item_catalog_conversion_is_inventory_guarded():

@@ -1,6 +1,7 @@
 import json
 
 import frappe
+from frappe.utils import nowdate
 
 
 WORST_PROJECTS_QUERY = """SELECT
@@ -8,14 +9,14 @@ WORST_PROJECTS_QUERY = """SELECT
   p.project_name AS "Project Name",
   p.customer AS "Customer",
   p.project_type AS "Project Type",
-  ROUND(COALESCE(gl.recognized_revenue, 0), 2) AS "Recognized Revenue",
-  ROUND(COALESCE(gl.gl_expense, 0), 2) AS "GL Expense",
+  ROUND(COALESCE(gl.recognized_revenue, 0), 2) AS "Recognized Revenue:Currency:130",
+  ROUND(COALESCE(gl.gl_expense, 0), 2) AS "GL Expense:Currency:120",
   ROUND(
     COALESCE(p.total_costing_amount, 0)
     + COALESCE(p.total_purchase_cost, 0)
     + COALESCE(p.total_consumed_material_cost, 0),
     2
-  ) AS "Project Cost Rollup",
+  ) AS "Project Cost Rollup:Currency:130",
   ROUND(
     GREATEST(
       COALESCE(gl.gl_expense, 0),
@@ -24,7 +25,7 @@ WORST_PROJECTS_QUERY = """SELECT
       + COALESCE(p.total_consumed_material_cost, 0)
     ),
     2
-  ) AS "Recognized Cost",
+  ) AS "Recognized Cost:Currency:130",
   ROUND(
     COALESCE(gl.recognized_revenue, 0)
     - GREATEST(
@@ -34,7 +35,7 @@ WORST_PROJECTS_QUERY = """SELECT
       + COALESCE(p.total_consumed_material_cost, 0)
     ),
     2
-  ) AS "Recognized Gross Margin"
+  ) AS "Recognized Gross Margin:Currency:150"
 FROM `tabProject` p
 LEFT JOIN (
   SELECT
@@ -77,6 +78,7 @@ LIMIT 10"""
 def execute():
     repair_profit_and_loss_charts()
     repair_worst_projects_report()
+    repair_worst_projects_chart()
 
 
 def repair_profit_and_loss_charts():
@@ -91,6 +93,41 @@ def repair_profit_and_loss_charts():
         ["filters_json", "type", "time_interval", "currency", "show_values_over_chart"],
         as_dict=True,
     )
+    fiscal_year = frappe.db.get_value(
+        "Fiscal Year",
+        {
+            "year_start_date": ["<=", nowdate()],
+            "year_end_date": [">=", nowdate()],
+        },
+        "name",
+    )
+    company = (
+        frappe.defaults.get_global_default("company")
+        or frappe.db.get_value("Company", {"company_name": "Alumicraft"}, "name")
+    )
+    if fiscal_year:
+        current.filters_json = json.dumps(
+            {
+                "company": company,
+                "filter_based_on": "Fiscal Year",
+                "from_fiscal_year": fiscal_year,
+                "to_fiscal_year": fiscal_year,
+                "periodicity": "Quarterly",
+                "presentation_currency": "USD",
+                "show_account_details": "Summary",
+                "selected_view": "Report",
+                "accumulated_values": 0,
+                "include_default_book_entries": 1,
+                "show_zero_values": 0,
+            },
+            separators=(",", ":"),
+        )
+        frappe.db.set_value(
+            "Dashboard Chart",
+            new_name,
+            current,
+            update_modified=True,
+        )
     if frappe.db.exists("Dashboard Chart", old_name):
         frappe.db.set_value(
             "Dashboard Chart",
@@ -146,3 +183,32 @@ def repair_worst_projects_report():
         WORST_PROJECTS_QUERY,
         update_modified=True,
     )
+
+
+def repair_worst_projects_chart():
+    chart_name = "Worst Performing Projects by Gross Margin $"
+    if not frappe.db.exists("Dashboard Chart", chart_name):
+        return
+
+    doc = frappe.get_doc("Dashboard Chart", chart_name)
+    expected_axis = [("recognized_gross_margin", "#C97A40")]
+    current_axis = [(row.y_field, row.color) for row in doc.y_axis]
+
+    changed = False
+    if doc.x_field != "project":
+        doc.x_field = "project"
+        changed = True
+    if current_axis != expected_axis:
+        doc.set("y_axis", [])
+        for y_field, color in expected_axis:
+            doc.append("y_axis", {"y_field": y_field, "color": color})
+        changed = True
+    if not doc.show_values_over_chart:
+        doc.show_values_over_chart = 1
+        changed = True
+    if doc.currency != "USD":
+        doc.currency = "USD"
+        changed = True
+
+    if changed:
+        doc.save(ignore_permissions=True)
