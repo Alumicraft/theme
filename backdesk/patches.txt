@@ -1,3 +1,4 @@
+[pre_model_sync]
 backdesk.patches.v0_0_1.remove_module_workspace
 backdesk.patches.v0_0_2.repair_workspace_sidebar
 backdesk.patches.v0_0_2.correct_product_sales_workflow
@@ -6,4 +7,6 @@ backdesk.patches.v0_0_2.convert_items_to_non_stock_catalog
 backdesk.patches.v0_0_2.repair_financial_charts
 backdesk.patches.v0_0_2.repair_financial_charts_v2
 backdesk.patches.v0_0_2.repair_financial_charts_v3
+
+[post_model_sync]
 backdesk.patches.v0_0_2.add_project_profitability_report_link
