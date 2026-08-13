@@ -145,7 +145,7 @@ def test_workspace_sidebar_js_routes_internal_filtered_url_links_in_current_tab(
     assert "frappe.set_route(route_for_rule(item.link_to, label, opts, view))" in js
     assert "frappe.set_route(route_for_rule(parsed.doctype, label, opts, view))" in js
     assert "window.__backdesk_sidebar_debug.lastUrlClick" in js
-    assert 'BACKDESK_ASSET_VERSION = "20260805-3"' in hooks
+    assert 'BACKDESK_ASSET_VERSION = "20260813-1"' in hooks
     assert "sanitize_list_route_options" in js
     assert "normalize_sidebar_anchor_hrefs" in js
     assert "clean_sidebar_href_for_item" in js
