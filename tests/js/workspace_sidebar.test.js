@@ -12,7 +12,15 @@ const SCRIPT = fs.readFileSync(
 );
 
 function loadHarness(callImplementation, options = {}) {
-	const counts = { alerts: 0, reloads: 0, routes: 0, routeArgs: [], replacements: [] };
+	const counts = {
+		alerts: 0,
+		reloads: 0,
+		routes: 0,
+		routeArgs: [],
+		replacements: [],
+		setups: [],
+		activeWorkspaceUpdates: 0,
+	};
 	const stored = { ...(options.stored || {}) };
 	const sessionStored = { ...(options.sessionStored || {}) };
 	const sidebar = {
@@ -46,15 +54,27 @@ function loadHarness(callImplementation, options = {}) {
 		reload() { counts.reloads += 1; },
 		save_page() {},
 	};
+	let currentRoute = options.route || ["Workspaces", "Jobs"];
+	const sidebarController = {
+		current_workspace: options.currentWorkspace || "Jobs",
+		set_active_workspace_item() { counts.activeWorkspaceUpdates += 1; },
+		set_workspace_sidebar() {},
+		setup(workspaceTitle) {
+			counts.setups.push(workspaceTitle);
+			this.current_workspace = workspaceTitle;
+			this.sidebar_title = workspaceTitle;
+		},
+		sidebar_title: options.currentWorkspace || "Jobs",
+	};
+	if (options.legacySidebarPatch) {
+		sidebarController._sidebar_fix_original_setup = sidebarController.setup.bind(sidebarController);
+		sidebarController.setup = function legacySetup(workspaceTitle) {
+			return this._sidebar_fix_original_setup(workspaceTitle);
+		};
+	}
 	const frappe = {
 		app: {
-			sidebar: {
-				current_workspace: options.currentWorkspace || "Jobs",
-				set_active_workspace_item() {},
-				set_workspace_sidebar() {},
-				setup() {},
-				sidebar_title: options.currentWorkspace || "Jobs",
-			},
+			sidebar: sidebarController,
 		},
 		boot: {
 			workspace_sidebar_item: Object.fromEntries(
@@ -63,7 +83,7 @@ function loadHarness(callImplementation, options = {}) {
 			),
 		},
 		call: callImplementation,
-		get_route() { return options.route || ["Workspaces", "Jobs"]; },
+		get_route() { return currentRoute; },
 		router: { on() {}, slug(value) { return value.toLowerCase(); } },
 		route_flags: {},
 		set_route(...args) {
@@ -115,7 +135,14 @@ function loadHarness(callImplementation, options = {}) {
 	context.window.frappe = frappe;
 	context.window.$ = jquery;
 	vm.runInNewContext(SCRIPT, context);
-	return { counts, frappe, workspace, stored, sessionStored };
+	return {
+		counts,
+		frappe,
+		workspace,
+		stored,
+		sessionStored,
+		setRoute(route) { currentRoute = route; },
+	};
 }
 
 test("workspace save completes once when Frappe uses callback and Promise", async () => {
@@ -207,4 +234,24 @@ test("valid Alumicraft workspace stays on its current route", () => {
 	});
 
 	assert.deepEqual(harness.counts.replacements, []);
+});
+
+test("workspace switch remains interactive across repeated navigation with legacy patch loaded", () => {
+	const harness = loadHarness(() => Promise.resolve({}), {
+		route: ["Workspaces", "Jobs"],
+		currentWorkspace: "Jobs",
+		legacySidebarPatch: true,
+	});
+
+	harness.setRoute(["Workspaces", "Finance"]);
+	harness.frappe.app.sidebar.set_workspace_sidebar();
+	harness.setRoute(["Workspaces", "Overview"]);
+	harness.frappe.app.sidebar.set_workspace_sidebar();
+	harness.setRoute(["Workspaces", "Jobs"]);
+	harness.frappe.app.sidebar.set_workspace_sidebar();
+
+	assert.deepEqual(harness.counts.setups, ["Finance", "Overview", "Jobs"]);
+	assert.equal(harness.frappe.app.sidebar.sidebar_title, "Jobs");
+	assert.equal(harness.sessionStored.backdesk_sidebar_fix_tab_workspace, "Jobs");
+	assert.equal(harness.counts.activeWorkspaceUpdates, 3);
 });
