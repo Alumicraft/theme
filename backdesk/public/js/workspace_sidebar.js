@@ -8,7 +8,7 @@
 	"use strict";
 
 	window.__backdesk_sidebar_debug = window.__backdesk_sidebar_debug || {};
-	window.__backdesk_sidebar_debug.version = "20260813-1";
+	window.__backdesk_sidebar_debug.version = "20260813-2";
 
 	var _initialized = false;
 	var _last_clicked = null;
@@ -951,6 +951,13 @@
 		return null;
 	}
 
+	function workspace_title_from_route(route) {
+		var slug = workspace_slug_from_route(route || []);
+		if (!slug) return null;
+		var workspace = workspace_from_slug(slug);
+		return workspace ? workspace.label : null;
+	}
+
 	function find_candidate_workspaces(entity) {
 		var map = frappe.boot.workspace_sidebar_item || {};
 		var out = [];
@@ -1043,19 +1050,29 @@
 		if (typeof sb.setup !== "function") return false;
 
 		var original = sb.set_workspace_sidebar.bind(sb);
-		var original_setup = sb.setup.bind(sb);
+		// Alumicraft historically shipped its own sidebar patch. If it loaded
+		// first, sb.setup is already a wrapper that can retain stale state after
+		// the first workspace change. Prefer the original Frappe setup it saved
+		// so every explicit switch rebuilds a fresh, fully interactive header.
+		var original_setup =
+			typeof sb._sidebar_fix_original_setup === "function"
+				? sb._sidebar_fix_original_setup
+				: sb.setup.bind(sb);
 
 		sb.set_workspace_sidebar = function (router) {
 			try {
 				var route = frappe.get_route() || [];
-				var slug = "";
-				if (route.length === 1) {
-					slug = (route[0] || "").toLowerCase();
-				} else if (route.length >= 2 && (route[0] || "").toLowerCase() === "workspaces") {
-					return original(router);
+				var workspace_title = workspace_title_from_route(route);
+				var is_workspace_nav = !!workspace_title;
+				if (is_workspace_nav) {
+					if (sb.sidebar_title !== workspace_title) original_setup(workspace_title);
+					if (typeof sb.set_active_workspace_item === "function") {
+						sb.set_active_workspace_item();
+					}
+					save_last_workspace();
+					return;
 				}
 
-				var is_workspace_nav = slug && !!workspace_from_slug(slug);
 				var correct = pick_correct_workspace();
 				if (!is_workspace_nav && correct) {
 					if (sb.sidebar_title !== correct) {
@@ -1066,7 +1083,7 @@
 					return;
 				}
 
-				if (is_workspace_nav || !sb.sidebar_title) return original(router);
+				if (!sb.sidebar_title) return original(router);
 				sb.set_active_workspace_item();
 			} catch (e) {
 				return original(router);
