@@ -5,3 +5,4 @@ backdesk.patches.v0_0_2.repair_overview_and_time_reporting
 backdesk.patches.v0_0_2.convert_items_to_non_stock_catalog
 backdesk.patches.v0_0_2.repair_financial_charts
 backdesk.patches.v0_0_2.repair_financial_charts_v2
+backdesk.patches.v0_0_2.repair_financial_charts_v3

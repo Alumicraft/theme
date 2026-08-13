@@ -97,6 +97,17 @@ html[data-theme="dark"] body .body-sidebar-container .sidebar-item-label {
     color: #ffffff !important;
 }
 
+/*
+ * Frappe Charts does not assign its label token to values rendered directly
+ * over data points. Those SVG labels otherwise inherit a black fill in dark
+ * workspaces, even while axes and legends use the correct theme color.
+ */
+html[data-theme="dark"] body.backdesk-workspace-fullbleed .chart-container .data-point-value,
+html[data-theme="dark"] body[data-route^="Workspaces/"] .chart-container .data-point-value,
+html[data-theme="dark"] body:has(.workspace-body) .chart-container .data-point-value {
+    fill: var(--text-color, #f4f5f6) !important;
+}
+
 body.backdesk-workspace-fullbleed [data-page-route="Workspaces"] .widget.spacer,
 body[data-route^="Workspaces/"] [data-page-route="Workspaces"] .widget.spacer,
 body:has(.workspace-body) [data-page-route="Workspaces"] .widget.spacer {

@@ -75,10 +75,57 @@ ORDER BY (
 LIMIT 10"""
 
 
+QUARTERLY_PROFIT_AND_LOSS_REPORT = "Quarterly Profit and Loss Dashboard"
+
+# Match the default series order and colors shipped by Frappe Charts.
+FRAPPE_CHART_COLORS = {
+    "pink": "#F683AE",
+    "blue": "#318AD8",
+    "green": "#48BB74",
+}
+
+QUARTERLY_PROFIT_AND_LOSS_QUERY = """SELECT
+  CONCAT('Q', QUARTER(gle.posting_date)) AS "Quarter:Data:90",
+  ROUND(
+    SUM(CASE WHEN account.root_type = 'Income'
+      THEN gle.credit - gle.debit ELSE 0 END),
+    2
+  ) AS "Income:Currency:140",
+  ROUND(
+    SUM(CASE WHEN account.root_type = 'Expense'
+      THEN gle.debit - gle.credit ELSE 0 END),
+    2
+  ) AS "Expense:Currency:140",
+  ROUND(
+    SUM(
+      CASE
+        WHEN account.root_type = 'Income' THEN gle.credit - gle.debit
+        WHEN account.root_type = 'Expense' THEN gle.credit - gle.debit
+        ELSE 0
+      END
+    ),
+    2
+  ) AS "Profit:Currency:140"
+FROM `tabGL Entry` gle
+INNER JOIN `tabAccount` account ON account.name = gle.account
+WHERE gle.company = 'Alumicraft'
+  AND gle.is_cancelled = 0
+  AND EXISTS (
+    SELECT 1
+    FROM `tabFiscal Year` fiscal_year
+    WHERE CURDATE() BETWEEN fiscal_year.year_start_date AND fiscal_year.year_end_date
+      AND gle.posting_date BETWEEN fiscal_year.year_start_date AND fiscal_year.year_end_date
+  )
+GROUP BY QUARTER(gle.posting_date)
+ORDER BY QUARTER(gle.posting_date)"""
+
+
 def execute():
     repair_profit_and_loss_charts()
+    repair_profit_and_loss_dashboard_source()
     repair_worst_projects_report()
     repair_worst_projects_chart()
+    repair_finance_customer_deposits_card()
 
 
 def repair_profit_and_loss_charts():
@@ -172,6 +219,74 @@ def repair_profit_and_loss_charts():
             )
 
 
+def repair_profit_and_loss_dashboard_source():
+    report_name = QUARTERLY_PROFIT_AND_LOSS_REPORT
+    if frappe.db.exists("Report", report_name):
+        report = frappe.get_doc("Report", report_name)
+    else:
+        report = frappe.new_doc("Report")
+        report.report_name = report_name
+
+    report.ref_doctype = "GL Entry"
+    report.report_type = "Query Report"
+    report.is_standard = "No"
+    report.module = "Accounts"
+    report.query = QUARTERLY_PROFIT_AND_LOSS_QUERY
+    report.save(ignore_permissions=True)
+
+    legacy_chart_name = "Profit and Loss New"
+    chart_name = "Quarterly Profit and Loss"
+    if frappe.db.exists("Dashboard Chart", chart_name):
+        chart = frappe.get_doc("Dashboard Chart", chart_name)
+    else:
+        chart = frappe.new_doc("Dashboard Chart")
+        chart.chart_name = chart_name
+
+    expected_axis = [
+        ("income", FRAPPE_CHART_COLORS["pink"]),
+        ("expense", FRAPPE_CHART_COLORS["blue"]),
+        ("profit", FRAPPE_CHART_COLORS["green"]),
+    ]
+    chart.module = "Accounts"
+    chart.is_public = 1
+    chart.chart_type = "Report"
+    chart.report_name = report_name
+    chart.use_report_chart = 0
+    chart.x_field = "quarter"
+    chart.filters_json = "{}"
+    chart.dynamic_filters_json = "{}"
+    chart.type = "Bar"
+    chart.currency = "USD"
+    chart.show_values_over_chart = 1
+    chart.set("y_axis", [])
+    for y_field, color in expected_axis:
+        chart.append("y_axis", {"y_field": y_field, "color": color})
+    chart.save(ignore_permissions=True)
+
+    for row in frappe.get_all(
+        "Workspace Chart",
+        filters={"chart_name": ["in", [legacy_chart_name, chart_name]]},
+        fields=["name"],
+    ):
+        frappe.db.set_value(
+            "Workspace Chart",
+            row.name,
+            {"label": chart_name, "chart_name": chart_name},
+            update_modified=False,
+        )
+
+    for workspace in frappe.get_all("Workspace", fields=["name", "content"]):
+        if legacy_chart_name not in (workspace.content or ""):
+            continue
+        frappe.db.set_value(
+            "Workspace",
+            workspace.name,
+            "content",
+            workspace.content.replace(legacy_chart_name, chart_name),
+            update_modified=True,
+        )
+
+
 def repair_worst_projects_report():
     report_name = "Worst Performing Projects by Gross Margin $"
     if not frappe.db.exists("Report", report_name):
@@ -191,7 +306,7 @@ def repair_worst_projects_chart():
         return
 
     doc = frappe.get_doc("Dashboard Chart", chart_name)
-    expected_axis = [("recognized_gross_margin", "#C97A40")]
+    expected_axis = [("recognized_gross_margin", FRAPPE_CHART_COLORS["pink"])]
     current_axis = [(row.y_field, row.color) for row in doc.y_axis]
 
     changed = False
@@ -212,3 +327,55 @@ def repair_worst_projects_chart():
 
     if changed:
         doc.save(ignore_permissions=True)
+
+
+def repair_finance_customer_deposits_card():
+    workspace_name = "Finance"
+    card_name = "Customer Deposits"
+    if not (
+        frappe.db.exists("Workspace", workspace_name)
+        and frappe.db.exists("Number Card", card_name)
+    ):
+        return
+
+    workspace = frappe.get_doc("Workspace", workspace_name)
+    changed = False
+
+    if not any(row.number_card_name == card_name for row in workspace.number_cards):
+        workspace.append(
+            "number_cards",
+            {"label": card_name, "number_card_name": card_name},
+        )
+        changed = True
+
+    try:
+        content = json.loads(workspace.content or "[]")
+    except (TypeError, ValueError):
+        content = []
+
+    has_card_block = any(
+        isinstance(block, dict)
+        and block.get("type") == "number_card"
+        and (block.get("data") or {}).get("number_card_name") == card_name
+        for block in content
+    )
+    if not has_card_block:
+        card_block = {
+            "id": "backdesk-finance-customer-deposits",
+            "type": "number_card",
+            "data": {"number_card_name": card_name, "col": 3},
+        }
+        insert_at = next(
+            (
+                index
+                for index, block in enumerate(content)
+                if isinstance(block, dict) and block.get("type") == "spacer"
+            ),
+            len(content),
+        )
+        content.insert(insert_at, card_block)
+        workspace.content = json.dumps(content, separators=(",", ":"))
+        changed = True
+
+    if changed:
+        workspace.save(ignore_permissions=True)

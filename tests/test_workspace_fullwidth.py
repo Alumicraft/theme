@@ -68,6 +68,14 @@ def test_workspace_fullwidth_css_styles_workspace_background_and_navbar_only():
     assert 'body[data-route^="Workspaces/"] .navbar' in css
     assert "body:has(.workspace-body) .navbar" in css
     assert "body.backdesk-workspace-fullbleed [data-page-route=\"Workspaces\"] .widget.spacer" in css
+
+
+def test_workspace_chart_values_remain_legible_in_dark_mode():
+    css = read("backdesk/public/css/workspace_fullwidth.css")
+
+    assert 'html[data-theme="dark"]' in css
+    assert ".chart-container .data-point-value" in css
+    assert "fill: var(--text-color, #f4f5f6) !important" in css
     assert 'body[data-route^="Workspaces/"] [data-page-route="Workspaces"] .widget.spacer' in css
     assert 'html[data-theme="dark"] body.backdesk-workspace-fullbleed' in css
     assert "--backdesk-workspace-navbar-foreground: #ffffff" in css
@@ -449,9 +457,11 @@ def test_financial_chart_patch_uses_current_pnl_and_recognized_project_margin():
     patches = read("backdesk/patches.txt")
     workspace_patch = read("backdesk/patches/v0_0_2/repair_workspace_sidebar.py")
     chart_patch = read("backdesk/patches/v0_0_2/repair_financial_charts.py")
+    followup_patch = read("backdesk/patches/v0_0_2/repair_financial_charts_v3.py")
 
     assert "backdesk.patches.v0_0_2.repair_financial_charts" in patches
     assert "backdesk.patches.v0_0_2.repair_financial_charts_v2" in patches
+    assert "backdesk.patches.v0_0_2.repair_financial_charts_v3" in patches
     assert '"chart_name": "Profit and Loss New"' in workspace_patch
     assert 'filters={"chart_name": old_name}' in chart_patch
     assert 'data.get("chart_name") == old_name' in chart_patch
@@ -465,9 +475,19 @@ def test_financial_chart_patch_uses_current_pnl_and_recognized_project_margin():
     assert "p.name NOT IN ('INVENTORY', 'SHOP')" in chart_patch
     assert 'AS "Recognized Gross Margin:Currency:150"' in chart_patch
     assert 'doc.x_field = "project"' in chart_patch
-    assert 'expected_axis = [("recognized_gross_margin", "#C97A40")]' in chart_patch
+    assert '"pink": "#F683AE"' in chart_patch
+    assert '"blue": "#318AD8"' in chart_patch
+    assert '"green": "#48BB74"' in chart_patch
+    assert '("income", FRAPPE_CHART_COLORS["pink"])' in chart_patch
+    assert '("expense", FRAPPE_CHART_COLORS["blue"])' in chart_patch
+    assert '("profit", FRAPPE_CHART_COLORS["green"])' in chart_patch
+    assert '[("recognized_gross_margin", FRAPPE_CHART_COLORS["pink"])]' in chart_patch
     assert "doc.show_values_over_chart = 1" in chart_patch
     assert 'doc.currency = "USD"' in chart_patch
+    assert 'card_name = "Customer Deposits"' in chart_patch
+    assert '"id": "backdesk-finance-customer-deposits"' in chart_patch
+    assert "repair_worst_projects_chart()" in followup_patch
+    assert "repair_finance_customer_deposits_card()" in followup_patch
 
 
 def test_item_catalog_conversion_is_inventory_guarded():
