@@ -9,7 +9,7 @@ frappe.pages["backdesk-month-end-close"].on_page_load = function (wrapper) {
 		{
 			title: __("Reconcile bank, card, and clearing accounts"),
 			instruction: __(
-				"Use the same month-end date for each statement. Map Transaction ID when the statement supplies it. Resolve unmatched lines and document timing differences, transfers, fees, and refunds."
+				"Use the same month-end date across the reconciliation. Map Transaction ID when the statement supplies it. For transfers that clear in different months, check each bank's statement and match the dated entries through the bookkeeper's cash-in-transit account. Document fees, refunds, and unmatched lines."
 			),
 			links: [
 				[__("Bank Statement Import"), ["List", "Bank Statement Import"]],
