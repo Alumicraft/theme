@@ -20,15 +20,20 @@ frappe.pages["backdesk-month-end-close"].on_page_load = function (wrapper) {
 	company_field.$input.attr("aria-label", __("Company"));
 	close_date_field.$input.attr("aria-label", __("Closing Date"));
 
-	async function open_report(report) {
+	function selected_close() {
 		const company = company_field.get_value();
 		const to_date = close_date_field.get_value();
 		if (!company || !to_date) {
 			frappe.msgprint(__("Select a company and closing date."));
 			return;
 		}
+		return { company, from_date: to_date.slice(0, 7) + "-01", to_date };
+	}
 
-		const from_date = to_date.slice(0, 7) + "-01";
+	async function open_report(report) {
+		const close = selected_close();
+		if (!close) return;
+		const { company, from_date, to_date } = close;
 		const filters = { company };
 		switch (report) {
 			case "Bank Reconciliation Statement": {
@@ -106,13 +111,6 @@ frappe.pages["backdesk-month-end-close"].on_page_load = function (wrapper) {
 				[__("Cash Flow"), ["query-report", "Cash Flow"]],
 			],
 		},
-		{
-			title: __("Record sign-off and protect the period"),
-			instruction: __(
-				"Retain the reconciliations, approved adjustments, and reviewer sign-off. After approval, open Accounting Period, confirm the company and dates, and check Closed for each document type you want to protect."
-			),
-			links: [[__("Accounting Period"), ["List", "Accounting Period"]]],
-		},
 	];
 
 	const checklist = $("<div>").addClass("standard-padding").appendTo(page.main);
@@ -149,4 +147,85 @@ frappe.pages["backdesk-month-end-close"].on_page_load = function (wrapper) {
 				.appendTo(links);
 		}
 	}
+
+	if (!frappe.model.can_read("Accounting Period")) return;
+	const close_section = $("<section>").addClass("border-top py-3").appendTo(checklist);
+	$("<h3>").addClass("h5").text(__("Record sign-off and protect the period")).appendTo(close_section);
+	$("<p>")
+		.text(__(
+			"Attach reconciliations and approved adjustments to the Accounting Period. Assign the reviewer and record their sign-off in Comments. Leave a new period Disabled during review. After approval, verify which document types are marked Closed, then clear Disabled and save."
+		))
+		.appendTo(close_section);
+	const find_button = $("<button>", { type: "button" })
+		.addClass("btn btn-default btn-sm mb-2")
+		.text(__("Find Accounting Period"))
+		.appendTo(close_section);
+	const period_status = $("<p>", { role: "status" }).addClass("text-muted mb-2").appendTo(close_section);
+	const period_actions = $("<div>").appendTo(close_section);
+	const clear_period_results = () => {
+		period_status.empty();
+		period_actions.empty();
+	};
+	for (const field of [company_field, close_date_field]) {
+		field.$input.on("change", clear_period_results);
+	}
+
+	find_button.on("click", async () => {
+		const close = selected_close();
+		if (!close) return;
+		const { company, from_date, to_date } = close;
+		clear_period_results();
+		period_status.text(__("Looking for Accounting Periods"));
+		find_button.prop("disabled", true);
+		try {
+			const periods = await frappe.xcall("frappe.client.get_list", {
+				doctype: "Accounting Period",
+				fields: ["name", "start_date", "end_date"],
+				filters: { company, start_date: ["<=", to_date], end_date: [">=", from_date] },
+				order_by: "start_date asc",
+				limit_page_length: 0,
+			}, "GET");
+			if (company !== company_field.get_value() || to_date !== close_date_field.get_value()) return;
+			const exact = periods.find((period) => period.start_date === from_date && period.end_date === to_date);
+			if (exact) {
+				clear_period_results();
+				frappe.set_route("Form", "Accounting Period", exact.name);
+				return;
+			}
+
+			if (periods.length) {
+				period_status.text(__("Existing Accounting Periods overlap this close. Review their dates before making changes."));
+				for (const period of periods) {
+					$("<button>", { type: "button" })
+						.addClass("btn btn-default btn-sm mr-2 mb-2")
+						.text(__("{0} ({1} to {2})", [period.name, period.start_date, period.end_date]))
+						.on("click", () => {
+							clear_period_results();
+							frappe.set_route("Form", "Accounting Period", period.name);
+						})
+						.appendTo(period_actions);
+				}
+				return;
+			}
+
+			period_status.text(__("No visible Accounting Period overlaps this close."));
+			if (!frappe.model.can_create("Accounting Period")) return;
+			if (to_date > frappe.datetime.get_today()) {
+				period_status.text(__("Choose a closing date on or before today to start an Accounting Period."));
+				return;
+			}
+			$("<button>", { type: "button" })
+				.addClass("btn btn-default btn-sm mb-2")
+				.text(__("New Accounting Period"))
+				.on("click", () => {
+					clear_period_results();
+					frappe.new_doc("Accounting Period", { company, start_date: from_date, end_date: to_date, disabled: 1 });
+				})
+				.appendTo(period_actions);
+		} catch {
+			period_status.text(__("The Accounting Period lookup failed. Try again."));
+		} finally {
+			find_button.prop("disabled", false);
+		}
+	});
 };
