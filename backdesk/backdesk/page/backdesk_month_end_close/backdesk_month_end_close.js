@@ -9,9 +9,10 @@ frappe.pages["backdesk-month-end-close"].on_page_load = function (wrapper) {
 		{
 			title: __("Reconcile bank, card, and clearing accounts"),
 			instruction: __(
-				"Use the same month-end date for each statement. Resolve unmatched lines and document timing differences, transfers, fees, and refunds."
+				"Use the same month-end date for each statement. Map Transaction ID when the statement supplies it. Resolve unmatched lines and document timing differences, transfers, fees, and refunds."
 			),
 			links: [
+				[__("Bank Statement Import"), ["List", "Bank Statement Import"]],
 				[__("Bank Transactions"), ["List", "Bank Transaction"]],
 				[__("Bank Reconciliation"), ["Form", "Bank Reconciliation Tool", "Bank Reconciliation Tool"]],
 				[__("Bank Reconciliation Statement"), ["query-report", "Bank Reconciliation Statement"]],
@@ -62,6 +63,9 @@ frappe.pages["backdesk-month-end-close"].on_page_load = function (wrapper) {
 		$("<p>").text(step.instruction).appendTo(section);
 		const links = $("<div>").addClass("d-flex flex-wrap").appendTo(section);
 		for (const [label, route] of step.links) {
+			if ((route[0] === "List" || route[0] === "Form") && !frappe.model.can_read(route[1])) {
+				continue;
+			}
 			$("<button>")
 				.attr("type", "button")
 				.addClass("btn btn-default btn-sm mr-2 mb-2")

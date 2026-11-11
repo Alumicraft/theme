@@ -24,6 +24,7 @@ FINANCE_GROUPS = (
     (
         "Banking",
         (
+            ("DocType", "Bank Statement Import", "Bank Statement Import"),
             ("DocType", "Bank Transaction", "Bank Transactions"),
             ("DocType", "Bank Reconciliation Tool", "Bank Reconciliation"),
             ("Report", "Bank Reconciliation Statement", "Bank Reconciliation Statement"),
