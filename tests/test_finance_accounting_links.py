@@ -53,9 +53,11 @@ def test_finance_links_preserve_existing_routes_and_can_be_applied_again(monkeyp
             ("DocType", "Workspace Sidebar"): True,
             ("Workspace Sidebar", "Finance"): sidebar,
             ("Report", "Accounts Receivable"): True,
+            ("DocType", "Payment Entry"): True,
             ("Report", "Accounts Payable"): True,
             ("DocType", "Bank Transaction"): True,
             ("Report", "Bank Reconciliation Statement"): True,
+            ("Report", "Customer Deposit QB Alignment"): True,
             ("DocType", "Accounting Period"): True,
         },
     )
@@ -67,18 +69,21 @@ def test_finance_links_preserve_existing_routes_and_can_be_applied_again(monkeyp
         "Receivables",
         "Outstanding Invoices",
         "Receivables Aging",
+        "Payment Entries",
         "Banking",
         "Our Bank Transactions",
         "Bank Reconciliation Statement",
         "Payables & Expenses",
         "Payables Aging",
+        "Imports",
+        "Customer Deposit QB Alignment",
         "Month-end Close",
         "Accounting Period",
     ]
     assert sidebar.items[1] is existing_invoice
     assert existing_invoice.filters == '[["status", "!=", "Paid"]]'
-    assert sidebar.items[4] is existing_bank
-    assert [item.idx for item in sidebar.items] == list(range(1, 11))
+    assert sidebar.items[5] is existing_bank
+    assert [item.idx for item in sidebar.items] == list(range(1, 14))
     assert sidebar.saves == 1
 
 

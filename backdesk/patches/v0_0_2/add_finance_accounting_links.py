@@ -8,6 +8,7 @@ FINANCE_GROUPS = (
         "Receivables",
         (
             ("Report", "Accounts Receivable", "Receivables Aging"),
+            ("DocType", "Payment Entry", "Payment Entries"),
             ("DocType", "Payment Reconciliation", "Payment Reconciliation"),
             ("Report", "Customer Deposit Ledger", "Customer Deposit Ledger"),
         ),
@@ -34,6 +35,7 @@ FINANCE_GROUPS = (
         "Imports",
         (
             ("Report", "QuickBooks Import Review", "QuickBooks Import Review"),
+            ("Report", "Customer Deposit QB Alignment", "Customer Deposit QB Alignment"),
             ("DocType", "Quickbook Settings", "QuickBooks Settings"),
         ),
     ),
