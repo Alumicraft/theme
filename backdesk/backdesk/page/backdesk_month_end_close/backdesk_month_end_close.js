@@ -45,7 +45,7 @@ frappe.pages["backdesk-month-end-close"].on_page_load = function (wrapper) {
 		{
 			title: __("Record sign-off and protect the period"),
 			instruction: __(
-				"Retain the reconciliations, approved adjustments, and reviewer sign-off. After approval, use Accounting Period to restrict postings to the closed dates."
+				"Retain the reconciliations, approved adjustments, and reviewer sign-off. After approval, open Accounting Period, confirm the company and dates, and check Closed for each document type you want to protect."
 			),
 			links: [[__("Accounting Period"), ["List", "Accounting Period"]]],
 		},
