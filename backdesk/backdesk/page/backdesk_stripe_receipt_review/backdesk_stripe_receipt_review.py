@@ -37,13 +37,38 @@ def review_receipts(company: str, clearing_account: str, fee_account: str, sourc
         )
     }
 
-    payments = defaultdict(list)
+    payments_by_reference = defaultdict(list)
     for payment in visible_rows(
         "Payment Entry",
         {"company": company, "docstatus": 1, "reference_no": ["in", references]},
         ["name", "reference_no", "payment_type", "posting_date"],
     ):
-        payments[payment.reference_no].append(payment)
+        payments_by_reference[payment.reference_no].append(payment)
+
+    verified_requests = [
+        request.name for receipt in receipts
+        if (request := requests.get(receipt["request"]))
+        and request.docstatus == 1 and request.get("stripe_invoice_id") == receipt["invoice"]
+    ]
+    payments_by_request = defaultdict(list)
+    if verified_requests and frappe.get_meta("Payment Entry Reference").has_field("payment_request"):
+        links = frappe.get_all(
+            "Payment Entry Reference",
+            filters={"payment_request": ["in", verified_requests], "parenttype": "Payment Entry",
+                     "parentfield": "references", "allocated_amount": [">", 0]},
+            fields=["parent", "payment_request"],
+        )
+        if links:
+            linked_payments = {
+                payment.name: payment for payment in visible_rows(
+                    "Payment Entry", {"company": company, "docstatus": 1,
+                                      "name": ["in", list(dict.fromkeys(link.parent for link in links))]},
+                    ["name", "payment_type", "posting_date"],
+                )
+            }
+            for link in links:
+                if link.parent in linked_payments:
+                    payments_by_request[link.payment_request].append(linked_payments[link.parent])
 
     fee_remarks = {f"Stripe processing fee for invoice {invoice}": invoice for invoice in invoice_ids}
     surcharge_remarks = {
@@ -65,7 +90,10 @@ def review_receipts(company: str, clearing_account: str, fee_account: str, sourc
         elif tag in surcharge_remarks:
             surcharges[surcharge_remarks[tag]].append(journal.name)
 
-    payment_names = [payment.name for group in payments.values() for payment in group]
+    payment_names = list(dict.fromkeys(
+        payment.name for groups in (payments_by_reference, payments_by_request)
+        for group in groups.values() for payment in group
+    ))
     journal_names = [name for groups in (fees, surcharges) for group in groups.values() for name in group]
     allocations = defaultdict(Decimal)
     if payment_names:
@@ -95,7 +123,10 @@ def review_receipts(company: str, clearing_account: str, fee_account: str, sourc
     for receipt in receipts:
         invoice = receipt["invoice"]
         request = requests.get(receipt["request"])
-        matches = payments[invoice] + payments[receipt["intent"]]
+        matches = list({payment.name: payment for payment in (
+            payments_by_reference[invoice] + payments_by_reference[receipt["intent"]]
+            + payments_by_request[receipt["request"]]
+        )}.values())
         payment_ids = [payment.name for payment in matches]
         fee_ids = fees[invoice]
         surcharge_ids = surcharges[invoice]
@@ -109,9 +140,9 @@ def review_receipts(company: str, clearing_account: str, fee_account: str, sourc
             issues.append(_("The Payment Request links to a different Stripe invoice."))
 
         if not matches:
-            issues.append(_("No visible submitted Payment Entry for these Stripe IDs."))
+            issues.append(_("No visible submitted Payment Entry matches the Stripe IDs or verified Payment Request."))
         elif len(matches) > 1:
-            issues.append(_("Multiple submitted Payment Entries match these Stripe IDs."))
+            issues.append(_("Multiple submitted Payment Entries match this Stripe receipt."))
         else:
             payment = matches[0]
             if payment.payment_type != "Receive":

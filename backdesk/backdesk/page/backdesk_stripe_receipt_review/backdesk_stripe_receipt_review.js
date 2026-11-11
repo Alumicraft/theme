@@ -29,7 +29,7 @@ frappe.pages["backdesk-stripe-receipt-review"].on_page_load = function (wrapper)
 
 	const body = $("<div>").addClass("standard-padding").appendTo(page.main);
 	$("<p>")
-		.text(__("Choose a USD Stripe receipts CSV and the two accounts used for Stripe in this company. The review looks up submitted vouchers by Stripe ID and checks their ledger amounts."))
+		.text(__("Choose a USD Stripe receipts CSV and the two accounts used for Stripe in this company. The review finds submitted receipts by Stripe ID or linked Payment Request and checks their ledger amounts."))
 		.appendTo(body);
 	const file = $("<input>", {
 		id: "stripe-receipts-source",
