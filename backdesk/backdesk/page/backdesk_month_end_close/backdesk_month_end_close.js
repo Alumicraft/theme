@@ -78,6 +78,8 @@ frappe.pages["backdesk-month-end-close"].on_page_load = function (wrapper) {
 				[__("Bank Transactions"), ["List", "Bank Transaction"]],
 				[__("Bank Reconciliation"), ["Form", "Bank Reconciliation Tool", "Bank Reconciliation Tool"]],
 				[__("Bank Reconciliation Statement"), ["query-report", "Bank Reconciliation Statement"]],
+				...(frappe.user_roles.includes("Accounts Manager")
+					? [[__("Stripe Receipt Review"), ["backdesk-stripe-receipt-review"]]] : []),
 			],
 		},
 		{

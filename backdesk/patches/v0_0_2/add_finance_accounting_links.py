@@ -29,6 +29,7 @@ FINANCE_GROUPS = (
             ("DocType", "Bank Transaction", "Bank Transactions"),
             ("DocType", "Bank Reconciliation Tool", "Bank Reconciliation"),
             ("Report", "Bank Reconciliation Statement", "Bank Reconciliation Statement"),
+            ("Page", "backdesk-stripe-receipt-review", "Stripe Receipt Review"),
         ),
     ),
     (
