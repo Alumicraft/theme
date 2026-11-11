@@ -1,0 +1,14 @@
+{
+ "doctype": "Page",
+ "module": "Backdesk",
+ "name": "backdesk-month-end-close",
+ "page_name": "backdesk-month-end-close",
+ "title": "Month-end Close",
+ "standard": "Yes",
+ "system_page": 0,
+ "roles": [
+  {"role": "Accounts User"},
+  {"role": "Accounts Manager"},
+  {"role": "System Manager"}
+ ]
+}
