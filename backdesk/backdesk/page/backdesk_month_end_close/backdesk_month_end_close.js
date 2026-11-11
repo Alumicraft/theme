@@ -4,6 +4,68 @@ frappe.pages["backdesk-month-end-close"].on_page_load = function (wrapper) {
 		title: __("Month-end Close"),
 		single_column: true,
 	});
+	const company_field = page.add_field({
+		fieldname: "company",
+		label: __("Company"),
+		fieldtype: "Link",
+		options: "Company",
+		default: frappe.defaults.get_user_default("Company"),
+	});
+	const close_date_field = page.add_field({
+		fieldname: "close_date",
+		label: __("Closing Date"),
+		fieldtype: "Date",
+		default: frappe.datetime.add_days(frappe.datetime.month_start(), -1),
+	});
+	company_field.$input.attr("aria-label", __("Company"));
+	close_date_field.$input.attr("aria-label", __("Closing Date"));
+
+	async function open_report(report) {
+		const company = company_field.get_value();
+		const to_date = close_date_field.get_value();
+		if (!company || !to_date) {
+			frappe.msgprint(__("Select a company and closing date."));
+			return;
+		}
+
+		const from_date = to_date.slice(0, 7) + "-01";
+		const filters = { company };
+		switch (report) {
+			case "Bank Reconciliation Statement": {
+				const { message } = await frappe.db.get_value("Company", company, "default_bank_account");
+				Object.assign(filters, { report_date: to_date, account: message?.default_bank_account || "" });
+				break;
+			}
+			case "Accounts Receivable":
+			case "Accounts Payable":
+				filters.report_date = to_date;
+				break;
+			case "Trial Balance": {
+				const [fiscal_year] = await frappe.xcall("erpnext.accounts.utils.get_fiscal_year", {
+					date: to_date,
+					company,
+				});
+				Object.assign(filters, { fiscal_year, from_date, to_date });
+				break;
+			}
+			case "General Ledger":
+				Object.assign(filters, { from_date, to_date });
+				break;
+			case "Profit and Loss Statement":
+			case "Balance Sheet":
+			case "Cash Flow":
+				Object.assign(filters, {
+					filter_based_on: "Date Range",
+					period_start_date: from_date,
+					period_end_date: to_date,
+					periodicity: "Monthly",
+				});
+				if (report === "Cash Flow") filters.show_opening_and_closing_balance = 1;
+				break;
+		}
+		frappe.route_options = filters;
+		frappe.set_route("query-report", report);
+	}
 
 	const steps = [
 		{
@@ -54,7 +116,7 @@ frappe.pages["backdesk-month-end-close"].on_page_load = function (wrapper) {
 	const checklist = $("<div>").addClass("standard-padding").appendTo(page.main);
 	$("<p>")
 		.addClass("text-muted")
-		.text(__("Use one company and reporting period across the close. Each link opens the native ERPNext tool."))
+		.text(__("Report links use the selected company and the month through the closing date."))
 		.appendTo(checklist);
 
 	for (const step of steps) {
@@ -70,7 +132,18 @@ frappe.pages["backdesk-month-end-close"].on_page_load = function (wrapper) {
 				.attr("type", "button")
 				.addClass("btn btn-default btn-sm mr-2 mb-2")
 				.text(label)
-				.on("click", () => frappe.set_route(...route))
+				.on("click", async (event) => {
+					if (route[0] !== "query-report") {
+						frappe.set_route(...route);
+						return;
+					}
+					const button = $(event.currentTarget).prop("disabled", true);
+					try {
+						await open_report(route[1]);
+					} finally {
+						button.prop("disabled", false);
+					}
+				})
 				.appendTo(links);
 		}
 	}
