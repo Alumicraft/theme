@@ -71,7 +71,7 @@ frappe.pages["backdesk-month-end-close"].on_page_load = function (wrapper) {
 		{
 			title: __("Reconcile bank, card, and clearing accounts"),
 			instruction: __(
-				"Use the same month-end date across the reconciliation. Map Transaction ID when the statement supplies it. For transfers that clear in different months, check each bank's statement and match the dated entries through the bookkeeper's cash-in-transit account. Document fees, refunds, and unmatched lines."
+				"Use the same month-end date across the reconciliation. Map Transaction ID when the statement supplies it. Match Stripe payouts to the bank and use Stripe's Balance report to verify funds awaiting payout, standalone fees, and bank debits. For transfers that clear in different months, match each dated entry through the bookkeeper's cash-in-transit account. Document refunds and unmatched lines."
 			),
 			links: [
 				[__("Bank Statement Import"), ["List", "Bank Statement Import"]],
