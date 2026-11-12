@@ -42,6 +42,10 @@ frappe.pages["backdesk-month-end-close"].on_page_load = function (wrapper) {
 				break;
 			}
 			case "Accounts Receivable":
+			case "Accounts Receivable Summary":
+				Object.assign(filters, { report_date: to_date, for_revaluation_journals: 1 });
+				if (report === "Accounts Receivable Summary") filters.show_gl_balance = 1;
+				break;
 			case "Accounts Payable":
 				filters.report_date = to_date;
 				break;
@@ -94,6 +98,7 @@ frappe.pages["backdesk-month-end-close"].on_page_load = function (wrapper) {
 			),
 			links: [
 				[__("Receivables Aging"), ["query-report", "Accounts Receivable"]],
+				[__("Receivables Ledger Comparison"), ["query-report", "Accounts Receivable Summary"]],
 				[__("Payables Aging"), ["query-report", "Accounts Payable"]],
 				[__("Payment Reconciliation"), ["Form", "Payment Reconciliation", "Payment Reconciliation"]],
 			],
