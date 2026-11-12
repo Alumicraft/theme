@@ -1,0 +1,14 @@
+{
+ "doctype": "Page",
+ "module": "Backdesk",
+ "name": "backdesk-stripe-receipt-review",
+ "page_name": "backdesk-stripe-receipt-review",
+ "title": "Stripe Receipt Review",
+ "standard": "Yes",
+ "system_page": 0,
+ "roles": [
+  {
+   "role": "Accounts Manager"
+  }
+ ]
+}
