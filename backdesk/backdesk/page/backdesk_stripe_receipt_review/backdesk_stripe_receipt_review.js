@@ -94,7 +94,7 @@ frappe.pages["backdesk-stripe-receipt-review"].on_page_load = function (wrapper)
 		const table = $("<table>").addClass("table table-bordered").appendTo(results);
 		const headers = $("<tr>").appendTo($("<thead>").appendTo(table));
 		for (const label of ["Paid Date", "Stripe Invoice", "Payment Request", "Payment Entries",
-			"Journals", "Gross (Stripe / Ledger)", "Fee (Stripe / Ledger)", "Result"]) {
+			"Journals", "Gross (Stripe / Matched Ledger)", "Fee (Stripe / Ledger)", "Result"]) {
 			$("<th>", { scope: "col" }).text(__(label)).appendTo(headers);
 		}
 		const tbody = $("<tbody>").appendTo(table);
@@ -111,6 +111,12 @@ frappe.pages["backdesk-stripe-receipt-review"].on_page_load = function (wrapper)
 			for (const payment of row.payments) {
 				append_links(entries, "Payment Entry", [payment.name]);
 				$("<div>").addClass("text-muted").text(payment.date).appendTo(entries);
+			}
+			for (const payment of row.payment_candidates ?? []) {
+				append_links(entries, "Payment Entry", [payment.name]);
+				$("<div>").addClass("text-muted").text(__("Possible receipt from Sales Order · {0} · {1}", [
+					payment.date, usd(payment.allocated),
+				])).appendTo(entries);
 			}
 			append_links($("<td>").appendTo(tr), "Journal Entry", [...row.surcharge_journals, ...row.fee_journals]);
 			$("<td>").text(usd(row.gross) + " / " + usd(row.gross_posted)).appendTo(tr);

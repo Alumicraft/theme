@@ -25,7 +25,7 @@ def review_receipts(company: str, clearing_account: str, fee_account: str, sourc
     receipts = read_source(source)
     invoice_ids = [receipt["invoice"] for receipt in receipts]
     references = invoice_ids + [receipt["intent"] for receipt in receipts if receipt["intent"]]
-    request_fields = ["name", "docstatus", "reference_doctype", "reference_name"]
+    request_fields = ["name", "docstatus", "reference_doctype", "reference_name", "currency", "grand_total"]
     if frappe.get_meta("Payment Request").has_field("stripe_invoice_id"):
         request_fields.append("stripe_invoice_id")
     requests = {
@@ -45,16 +45,16 @@ def review_receipts(company: str, clearing_account: str, fee_account: str, sourc
     ):
         payments_by_reference[payment.reference_no].append(payment)
 
-    verified_requests = [
+    verified_requests = {
         request.name for receipt in receipts
         if (request := requests.get(receipt["request"]))
         and request.docstatus == 1 and request.get("stripe_invoice_id") == receipt["invoice"]
-    ]
+    }
     payments_by_request = defaultdict(list)
     if verified_requests and frappe.get_meta("Payment Entry Reference").has_field("payment_request"):
         links = frappe.get_all(
             "Payment Entry Reference",
-            filters={"payment_request": ["in", verified_requests], "parenttype": "Payment Entry",
+            filters={"payment_request": ["in", sorted(verified_requests)], "parenttype": "Payment Entry",
                      "parentfield": "references", "allocated_amount": [">", 0]},
             fields=["parent", "payment_request"],
         )
@@ -69,6 +69,15 @@ def review_receipts(company: str, clearing_account: str, fee_account: str, sourc
             for link in links:
                 if link.parent in linked_payments:
                     payments_by_request[link.payment_request].append(linked_payments[link.parent])
+
+    receipts_without_match = [
+        requests[receipt["request"]] for receipt in receipts
+        if receipt["request"] in verified_requests
+        and not payments_by_request[receipt["request"]]
+        and not payments_by_reference[receipt["invoice"]]
+        and not payments_by_reference[receipt["intent"]]
+    ]
+    advance_candidates = find_reallocated_advances(company, receipts_without_match)
 
     fee_remarks = {f"Stripe processing fee for invoice {invoice}": invoice for invoice in invoice_ids}
     surcharge_remarks = {
@@ -139,7 +148,10 @@ def review_receipts(company: str, clearing_account: str, fee_account: str, sourc
         elif request.get("stripe_invoice_id") and request.stripe_invoice_id != invoice:
             issues.append(_("The Payment Request links to a different Stripe invoice."))
 
-        if not matches:
+        candidates = advance_candidates.get(receipt["request"], [])
+        if candidates:
+            issues.append(_("Confirm the receipt against the original Sales Order."))
+        elif not matches:
             issues.append(_("No visible submitted Payment Entry matches the Stripe IDs or verified Payment Request."))
         elif len(matches) > 1:
             issues.append(_("Multiple submitted Payment Entries match this Stripe receipt."))
@@ -166,10 +178,58 @@ def review_receipts(company: str, clearing_account: str, fee_account: str, sourc
         results.append({
             **receipt, "has_request": bool(request),
             "payments": [{"name": payment.name, "date": payment.posting_date} for payment in matches],
+            "payment_candidates": candidates,
             "fee_journals": fee_ids, "surcharge_journals": surcharge_ids,
             "gross_posted": gross_posted, "fee_posted": fee_posted, "issues": issues,
         })
     return results
+
+
+def find_reallocated_advances(company, requests):
+    order_requests = [
+        request for request in requests
+        if request.reference_doctype == "Sales Order" and request.reference_name and request.currency == "USD"
+    ]
+    if not order_requests:
+        return {}
+    meta = frappe.get_meta("Payment Entry Reference")
+    if not all(meta.has_field(field) for field in ("payment_request", "advance_voucher_type", "advance_voucher_no")):
+        return {}
+
+    allocated = defaultdict(lambda: defaultdict(Decimal))
+    for reference in frappe.get_all(
+        "Payment Entry Reference",
+        filters={"parenttype": "Payment Entry", "parentfield": "references",
+                 "reference_doctype": "Sales Invoice", "payment_request": ["is", "not set"],
+                 "advance_voucher_type": "Sales Order",
+                 "advance_voucher_no": ["in", sorted({request.reference_name for request in order_requests})],
+                 "allocated_amount": [">", 0]},
+        fields=["parent", "advance_voucher_no", "allocated_amount"],
+    ):
+        allocated[reference.advance_voucher_no][reference.parent] += money(reference.allocated_amount)
+
+    by_request = {
+        request.name: {
+            parent: amount for parent, amount in allocated[request.reference_name].items()
+            if amount == money(request.grand_total)
+        }
+        for request in order_requests
+    }
+    names = list(dict.fromkeys(parent for candidates in by_request.values() for parent in candidates))
+    if not names:
+        return {}
+
+    payments = visible_rows(
+        "Payment Entry",
+        {"company": company, "docstatus": 1, "payment_type": "Receive", "paid_from_account_currency": "USD",
+         "name": ["in", names]},
+        ["name", "posting_date"],
+    )
+    return {
+        name: [{"name": payment.name, "date": payment.posting_date, "allocated": candidates[payment.name]}
+               for payment in payments if payment.name in candidates]
+        for name, candidates in by_request.items()
+    }
 
 
 def validate_accounts(company, clearing_account, fee_account):

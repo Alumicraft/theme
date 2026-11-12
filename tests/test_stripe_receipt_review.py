@@ -140,3 +140,53 @@ def test_finds_receipt_with_bank_reference_through_the_stripe_payment_request(re
     assert result["payments"] == [{"name": "PE-1", "date": "2026-10-27"}]
     assert result["gross_posted"] == clearing_debit
     assert bool(result["issues"]) == (clearing_debit == 0)
+
+
+def test_shows_reallocated_sales_order_advance_as_a_candidate(review):
+    frappe = review.frappe
+    frappe.only_for = lambda _: None
+    frappe.has_permission = lambda *_: True
+    fields = {
+        "Payment Request": {"stripe_invoice_id"},
+        "Payment Entry Reference": {"payment_request", "advance_voucher_type", "advance_voucher_no"},
+    }
+    frappe.get_meta = lambda doctype: SimpleNamespace(has_field=fields[doctype].__contains__)
+    request = SimpleNamespace(
+        name="PR-1", docstatus=1, stripe_invoice_id="in_Sample", reference_doctype="Sales Order",
+        reference_name="SO-1", currency="USD", grand_total=780,
+        get=lambda field: "in_Sample" if field == "stripe_invoice_id" else None,
+    )
+    payment = SimpleNamespace(name="PE-1", payment_type="Receive", posting_date="2026-10-15")
+
+    def get_list(doctype, *, filters, **kwargs):
+        if doctype == "Company":
+            return [SimpleNamespace(default_currency="USD")]
+        if doctype == "Account":
+            return [SimpleNamespace(name="Clearing"), SimpleNamespace(name="Fees")]
+        if doctype == "Payment Request":
+            return [request]
+        if doctype == "Payment Entry" and "name" in filters:
+            assert filters["company"] == "Alumicraft" and filters["docstatus"] == 1
+            assert filters["name"] == ["in", ["PE-1", "PE-HIDDEN"]]
+            return [payment]
+        return []
+
+    def get_all(doctype, *, filters, **kwargs):
+        if doctype == "Payment Entry Reference" and "advance_voucher_no" in filters:
+            return [
+                SimpleNamespace(parent="PE-1", advance_voucher_no="SO-1", allocated_amount=780),
+                SimpleNamespace(parent="PE-HIDDEN", advance_voucher_no="SO-1", allocated_amount=780),
+                SimpleNamespace(parent="PE-WRONG-AMOUNT", advance_voucher_no="SO-1", allocated_amount=50),
+            ]
+        return []
+
+    frappe.get_list = get_list
+    frappe.get_all = get_all
+    source = ",".join(review.SOURCE_COLUMNS) + "\n2026-10-12,in_Sample,pi_Sample,PR-1,803.40,23.60\n"
+
+    result, = review.review_receipts("Alumicraft", "Clearing", "Fees", source)
+
+    assert result["payment_candidates"] == [{"name": "PE-1", "date": "2026-10-15", "allocated": Decimal("780.00")}]
+    assert result["payments"] == []
+    assert result["gross_posted"] == 0
+    assert "Confirm the receipt against the original Sales Order." in result["issues"]
